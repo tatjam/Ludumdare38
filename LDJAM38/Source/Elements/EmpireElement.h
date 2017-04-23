@@ -24,6 +24,27 @@ enum Relation
 
 #define FOOD_PER_PERSON 2.0f
 
+
+
+enum EventSeverity
+{
+	INFO,
+	WARN,
+	FATAL
+};
+
+struct Event
+{
+	EventSeverity severity;
+	std::string text;
+
+	Event(EventSeverity severity, std::string text)
+	{
+		this->severity = severity;
+		this->text = text;
+	}
+};
+
 class EmpireAI;
 
 class Empire
@@ -31,6 +52,8 @@ class Empire
 public:
 
 	EmpireAI* aicontroller;
+
+	std::vector<Event> events;
 
 	std::vector<Empire*> otherEmpires;
 
@@ -70,7 +93,10 @@ public:
 
 	int total_houses = 0;
 
+	float wantedTaxes = 0.5f;
 	float taxes = 0.5f;
+
+	float workEfficiency = 1.0f;
 
 	std::vector<Planet*> planets;
 
@@ -81,6 +107,53 @@ public:
 		previousFood.push_back(STARTING_FOOD);
 		previousMetal.push_back(STARTING_METAL);
 		previousTech.push_back(STARTING_TECH);
+	}
+
+	void updateMonthly()
+	{
+		taxes = wantedTaxes;
+
+		if (money < 0)
+		{
+			events.push_back(Event(EventSeverity::FATAL, "Your balance is negative. This will get your population unhappy!"));
+
+			// Every 100 negative money takes away 1 happiness point
+			happiness += money / 100;
+		}
+
+		if (happiness > 0)
+		{
+			// Every 20 happiness points brings efficiency to a double
+			workEfficiency = happiness / 20 + 1.0f;
+		}
+		else
+		{
+			// Negative happiness halfs efficiency
+			workEfficiency = 0.5f;
+		}
+
+		if (happiness >= 1)
+		{
+			// Every 2 happiness points you get a person
+			population += (int)(0.5f * happiness);
+		}
+		else
+		{
+			events.push_back(Event(EventSeverity::FATAL, "Your population is unhappy! Work efficiency is halved and you are losing population!"));
+			if (population > 15)
+			{
+
+				if (population + (int)(0.25f * happiness) <= 15)
+				{
+					population = 15;
+				}
+				else
+				{
+					// Every 4 negative happiness points you lose a person (migration, or mighty death!)
+					population += (int)(0.25f * happiness);
+				}
+			}
+		}
 	}
 
 	// Called every day
@@ -289,6 +362,11 @@ public:
 		linked->updateDaily();
 	}
 
+	void updateMonthly()
+	{
+		linked->updateMonthly();
+	}
+
 	void update(float dt)
 	{
 		// Complex sentient AI incoming
@@ -345,12 +423,12 @@ enum PlayerState
 };
 
 
-
-
 class EmpirePlayer
 {
 public:
 
+
+	std::vector<Event> events;
 
 	Universe* universe;
 	Empire* linked;
@@ -416,6 +494,10 @@ public:
 	sf::Texture* choosenTileImage;
 
 	sf::Vector2f editorOffset = sf::Vector2f(0.0f, 0.0f);
+
+
+	sf::Texture gear;
+	sf::Texture cross;
 
 	void drawEditorUI()
 	{
@@ -758,7 +840,8 @@ public:
 	{
 		ImGui::Begin("Economy");
 
-		ImGui::SliderFloat("Taxes", &linked->taxes, 0.0f, 5.0f);
+		ImGui::Text("Actual taxes: %f", linked->taxes);
+		ImGui::SliderFloat("Wanted Taxes", &linked->wantedTaxes, 0.0f, 5.0f);
 
 		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Population x Taxes:");
 		ImGui::SameLine();
@@ -768,7 +851,7 @@ public:
 
 		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Happiness Effect:");
 		ImGui::SameLine();
-		if (linked->taxes == 0)
+		if (linked->wantedTaxes == 0)
 		{
 			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "25");
 		}
@@ -813,10 +896,41 @@ public:
 
 	void drawEmpireWindow()
 	{
+
+		// Event window
+		int eventsShown = 0;
+
+		for (int i = 0; i < linked->events.size(); i++)
+		{
+
+			if (linked->events[i].text != "" && eventsShown < 5)
+			{
+				eventsShown++;
+				std::string composite = linked->events[i].text;
+				composite = shortenName(composite);
+				composite.append(std::to_string(i));
+
+				ImGui::SetNextWindowPos(ImVec2(systemWindow.width - 256.0f, eventsShown * 90 + systemWindow.height),
+					ImGuiSetCond_Always);
+				ImGui::SetNextWindowSize(ImVec2(256.0f, 80.0f),
+					ImGuiSetCond_Always);
+				ImGui::Begin(composite.c_str(), NULL, 
+					ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+					ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+				ImGui::TextWrapped(linked->events[i].text.c_str());
+				if (ImGui::Button("Dismiss"))
+				{
+					linked->events[i] = Event(EventSeverity::FATAL, "");
+				}
+				ImGui::End();
+			}
+		}
+
 		ImGui::SetNextWindowPos(ImVec2(empireWindow.left, empireWindow.top),
 			ImGuiSetCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(empireWindow.width, empireWindow.height),
 			ImGuiSetCond_Always);
+
 		ImGui::Begin("Empire", NULL,
 			ImGuiWindowFlags_NoTitleBar
 			| ImGuiWindowFlags_NoResize
@@ -944,6 +1058,32 @@ public:
 		}
 		ImGui::EndChild();
 
+		ImGui::SameLine();
+		ImGui::BeginChild("Menu&Stuff");
+		if (ImGui::ImageButton(gear, (empireWindow.height - 64) / 10))
+		{
+			settingsOpen = !settingsOpen;
+		}
+		if (ImGui::ImageButton(cross, (empireWindow.height - 64) / 10))
+		{
+			exit(0);
+		}
+		ImGui::EndChild();
+
+		ImGui::End();
+	}
+
+	bool fullscreen = false;
+	bool settingsOpen = false;
+
+	void drawSettingsWindow()
+	{
+		ImGui::Begin("Settings");
+		ImGui::Checkbox("Fullscreen", &fullscreen);
+		if (ImGui::Button("Close"))
+		{
+			settingsOpen = false;
+		}
 		ImGui::End();
 	}
 
@@ -1132,6 +1272,11 @@ public:
 				drawRelationsWindow();
 			}
 
+			if (settingsOpen)
+			{
+				drawSettingsWindow();
+			}
+
 		}
 		else if (state == PlayerState::EDIT_MODE)
 		{
@@ -1151,8 +1296,35 @@ public:
 		linked->updateDaily();
 	}
 
+	void updateMonthly()
+	{
+		linked->updateMonthly();
+	}
+
+	bool updateWindow = false;
+
 	void update(sf::View* v, float dt, sf::Vector2f mousePos, sf::RenderWindow* win)
 	{
+
+		if (fullscreen && !previousFullscreen)
+		{
+			win->create(sf::VideoMode::getFullscreenModes()[0], "FULLSCREEN Tinyplanets", sf::Style::Fullscreen);
+			previousFullscreen = true;
+			updateWindow = true;
+
+		}
+		else if (!fullscreen && previousFullscreen)
+		{
+			win->create(sf::VideoMode(1000, 650), "Tinyplanets", sf::Style::Default);
+			previousFullscreen = false;
+			updateWindow = true;
+		}
+		else
+		{
+			updateWindow = false;
+		}
+
+
 
 		frameAverage += dt;
 		frameAverage /= 2;
@@ -1317,6 +1489,8 @@ public:
 			}
 
 
+
+
 			/*printf("Drawing cursor at tile: %i {%f, %f} {%f, %f}\n", tileC, cursor.getPosition().x, 
 				cursor.getPosition().y, focused->worldPosition.x, focused->worldPosition.y);
 			printf("Mouse pos {%f, %f}\n", mousePos.x, mousePos.y);*/
@@ -1330,12 +1504,16 @@ public:
 		}
 	}
 
+	bool previousFullscreen = false;
+
 	void draw(sf::RenderWindow* win)
 	{
 		if (focused != NULL)
 		{
 			win->draw(cursor);
 		}
+
+
 	}
 
 	void resize(int width, int height)
@@ -1401,6 +1579,17 @@ public:
 		}
 	}
 
+	void updateMonthly()
+	{
+		player->updateMonthly();
+		for (int i = 0; i < aiempires.size(); i++)
+		{
+			aiempires[i]->updateMonthly();
+		}
+
+
+	}
+
 	void createAIEmpire()
 	{
 		Empire* n = new Empire();
@@ -1441,6 +1630,7 @@ public:
 		}
 		empires.push_back(n);
 		player->linked = empires[empires.size() - 1];
+
 		// Add us to every other empire
 		for (int i = 0; i < empires.size() - 1; i++)
 		{

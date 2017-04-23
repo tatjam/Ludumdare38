@@ -23,6 +23,8 @@ int main()
 
 	std::map<std::string, sf::Texture> buildings;
 
+	sf::Texture cross = sf::Texture();
+	sf::Texture gear = sf::Texture();
 	sf::Texture shade = sf::Texture();
 	sf::Texture rock = sf::Texture();
 	sf::Texture night = sf::Texture();
@@ -37,6 +39,8 @@ int main()
 	sf::Texture launcher = sf::Texture();
 	sf::Texture mine = sf::Texture();
 
+	cross.loadFromFile("Resource/cross.png");
+	gear.loadFromFile("Resource/gear.png");
 	shade.loadFromFile("Resource/shade.png");
 	rock.loadFromFile("Resource/rock.png");
 	night.loadFromFile("Resource/nightshadeflat.png");
@@ -133,9 +137,31 @@ int main()
 
 	empirePlayer.resize(startSize.x, startSize.y);
 
+	empirePlayer.gear = gear;
+	empirePlayer.cross = cross;
+
 	while (window.isOpen())
 	{
 		sf::Event event;
+
+		if (empirePlayer.updateWindow)
+		{
+			renderView.reset(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
+			window.setView(renderView);
+			if (window.getSize().x / (float)512 > window.getSize().y / (float)512)
+			{
+				backdropScale = window.getSize().x / (float)512;
+			}
+			else
+			{
+				backdropScale = window.getSize().y / 512;
+			}
+
+
+			//resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
+			empirePlayer.resize(window.getSize().x, window.getSize().y);
+		}
+
 		while (window.pollEvent(event))
 		{
 			ImGui::SFML::ProcessEvent(event);
@@ -202,8 +228,8 @@ int main()
 				renderView.getCenter().y - renderView.getSize().y / 2);
 		}
 
-		timeStepper += dt * timeSpeed;
-		if (timeStepper >= 0.5f)
+		timeStepper += dt * empirePlayer.timeSpeed;
+		if (timeStepper >= 1.0f)
 		{
 			timeStepper = 0.0f;
 			day++;
@@ -215,6 +241,7 @@ int main()
 			{
 				month++;
 				day = 1;
+				manager.updateMonthly();
 			}
 			if (month > 12)
 			{
