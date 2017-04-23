@@ -3,12 +3,12 @@
 #include "PlanetElement.h"
 
 
-#define MIN_PLANETS 5
-#define MAX_PLANETS 10
+#define MIN_PLANETS 8
+#define MAX_PLANETS 16
 #define MAX_POS 5000
 #define MIN_DISTANCE_TO_STAR 615
 
-#define MAX_PLANET_SIZE 32
+#define MAX_PLANET_SIZE 60
 #define MIN_PLANET_SIZE 12
 
 #define GRASS_BASE_COLOR sf::Color(169, 232, 118)
@@ -116,6 +116,8 @@ public:
 	void generate()
 	{
 
+		std::vector<std::string> usedNames;
+
 		starSpr = sf::Sprite(this->star);
 		starSpr.setPosition(-128 * 4, -128 * 4);
 		starSpr.setScale(4, 4);
@@ -162,7 +164,16 @@ public:
 
 			if (p->easyHabitable)
 			{
-				p->name = nameList[rand() % 32];
+				valid = false;
+				while (!valid)
+				{
+					p->name = nameList[rand() % 32];
+					if (std::find(usedNames.begin(), usedNames.end(), p->name) == usedNames.end())
+					{
+						valid = true;
+						usedNames.push_back(p->name);
+					}
+				}
 				habitables++;
 				// Earth like planet
 				p->hasAtmosphere = true;
@@ -172,7 +183,16 @@ public:
 			}
 			else
 			{
-				p->name = nameList[rand() % (64 - 32) + 32];
+				valid = false;
+				while (!valid)
+				{
+					p->name = nameList[rand() % (64 - 32) + 32];
+					if (std::find(usedNames.begin(), usedNames.end(), p->name) == usedNames.end())
+					{
+						valid = true;
+						usedNames.push_back(p->name);
+					}
+				}
 				// Non-earth like planet
 				p->hasAtmosphere = rand() < RAND_MAX / 8;
 				p->surfaceColor = DUST_BASE_COLOR;
@@ -193,6 +213,11 @@ public:
 				{
 					p->crustColor = REGOLITH_BASE_COLOR;
 				}
+			}
+
+			for (int i = 0; i < p->size; i++)
+			{
+				p->tiles[i] = rand() % 5;
 			}
 
 			printf("Generated planet (%i) %s: \n", i, p->name.c_str());

@@ -28,6 +28,9 @@ int main()
 	sf::Texture atmo = sf::Texture();
 	sf::Texture star = sf::Texture();
 	sf::Texture appartment = sf::Texture();
+	sf::Texture farm = sf::Texture();
+	sf::Texture house = sf::Texture();
+	sf::Texture lab = sf::Texture();
 	sf::Texture magic = sf::Texture();
 
 	shade.loadFromFile("Resource/shade.png");
@@ -38,9 +41,15 @@ int main()
 	space.loadFromFile("Resource/space.png");
 	magic.loadFromFile("Resource/magic.png");
 	appartment.loadFromFile("Resource/building/appartment.png");
+	farm.loadFromFile("Resource/building/farm.png");
+	house.loadFromFile("Resource/building/house.png");
+	lab.loadFromFile("Resource/building/lab.png");
 	space.setRepeated(true);
 
 	buildings["apps"] = appartment;
+	buildings["farm"] = farm;
+	buildings["house"] = house;
+	buildings["lab"] = lab;
 
 	sf::Rect<float> empireWindow;
 	sf::Rect<float> systemWindow;
@@ -49,7 +58,7 @@ int main()
 	sf::Sprite starSpr = sf::Sprite(star);
 	sf::Sprite backdrop = sf::Sprite(space);
 
-	sf::Vector2f startSize = sf::Vector2f(512, 512);
+	sf::Vector2f startSize = sf::Vector2f(1024, 768);
 
 	backdropScale = std::max(startSize.x / 512, startSize.y / 512);
 
@@ -101,6 +110,8 @@ int main()
 
 	Planet* focused = NULL;
 
+	float frameAverage = 0.0f;
+
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -129,10 +140,16 @@ int main()
 			}
 		}
 
+
+		dtt = dtClock.restart();
+		dt = dtt.asSeconds();
+
+		frameAverage += dt;
+		frameAverage *= 0.5f;
+
 		if (focused != NULL)
 		{
 			renderView.setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
-			printf("Focused on: %s", focused->name.c_str());
 		}
 		
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
@@ -191,8 +208,6 @@ int main()
 
 		mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
 
-		dtt = dtClock.restart();
-		dt = dtt.asSeconds();
 
 		timeStepper += dt * timeSpeed;
 		if (timeStepper >= 0.5f)
@@ -221,7 +236,60 @@ int main()
 			ImGuiWindowFlags_NoTitleBar 
 			| ImGuiWindowFlags_NoResize
 			| ImGuiWindowFlags_NoMove);
-		ImGui::Button("Lol");
+		ImGui::BeginChild("EmpireSubFocusData", ImVec2(empireWindow.width / 4, empireWindow.height - 40), true);
+		if (focused != NULL)
+		{
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Focused on ");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", focused->name.c_str());
+			ImGui::Separator();
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Owner: ");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "MR.Robot enterprise");
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Population: ");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "12312");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "| Tiles: ");
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i/%i", 10, focused->size);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Focused on no planet");
+		}
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::Button("Economy", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
+		ImGui::SameLine();
+		ImGui::BeginChild("EmpireSubEconomy", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
+		static float TestData[6] = { 0.f,-4.f,3.f,-2.f,0.f,4.f };
+		ImGui::PlotLines("Cash", TestData, 6);
+		ImGui::PlotLines("Food", TestData, 6);
+		ImGui::PlotLines("Metal", TestData, 6);
+		ImGui::PlotLines("Tech", TestData, 6);
+		ImGui::EndChild();
+		ImGui::SameLine();
+		ImGui::Button("People", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
+		ImGui::SameLine();
+		ImGui::BeginChild("EmpireSubPopulation", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
+		ImGui::EndChild();
+		ImGui::SameLine();
+		ImGui::Button("Relations", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
+		ImGui::SameLine();
+		ImGui::BeginChild("EmpireSubRelations", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Mr.Robot: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "GOOD");
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Comcast: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "AT WAR");
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Google: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "NEUTRAL");
+		ImGui::EndChild();
+
 		ImGui::End();
 
 		ImGui::SetNextWindowPos(ImVec2(systemWindow.left, systemWindow.top));
@@ -236,19 +304,15 @@ int main()
 
 		for (int i = 0; i < universe.count; i++)
 		{
-			if (i % 2 == 0)
-			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.4f, 0.2f, 1.0f));
+				
 				if (ImGui::Button(universe.planets[i]->name.c_str()))
 				{
 					focused = universe.planets[i];
 				}
-			}
-			else
-			{
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.4f, 0.2f, 1.0f));
-				ImGui::Button(universe.planets[i]->name.c_str());
+
 				ImGui::PopStyleColor(1);
-			}
+			
 			if (i < universe.count - 1)
 			{
 				ImGui::SameLine();
@@ -340,7 +404,7 @@ int main()
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "123456");
 		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(255, 255, 0, 1.0f), "$");
+		ImGui::TextColored(ImVec4(255, 255, 0, 1.0f), "C");
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
 		ImGui::SameLine();
@@ -353,6 +417,10 @@ int main()
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "M");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i", (int)(1 / frameAverage));
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "FPS");
 		//	ImGui::Image(magic, sf::Vector2f(16, 16), sf::FloatRect(0, 0, 16, 16));
 		ImGui::End();
 

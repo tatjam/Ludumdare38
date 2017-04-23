@@ -38,13 +38,13 @@ class Empire
 {
 public:
 
-	int money;
-	int food;
-	int tech;
-	int metal;
+	int money = 0;
+	int food = 0;
+	int tech = 0;
+	int metal = 0;
 
-	int population;
-	int soldiers;
+	int population = 0;
+	int soldiers = 0;
 
 	std::vector<Planet*> planets;
 

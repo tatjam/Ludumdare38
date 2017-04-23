@@ -185,9 +185,17 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 	for (int i = 0; i < size; i++)
 	{
 		int btype = tiles[i];
-		if (btype == 0)
+		if (btype != 0)
 		{
-			sf::Sprite b = sf::Sprite(buildings["apps"]);
+			sf::Sprite b;
+			if(btype == BUILDING_APPARTMENT)
+				b = sf::Sprite(buildings["apps"]);
+			if (btype == BUILDING_HOUSE)
+				b = sf::Sprite(buildings["house"]);
+			if (btype == BUILDING_LABORATORY)
+				b = sf::Sprite(buildings["lab"]);
+			if (btype == BUILDING_FARM)
+				b = sf::Sprite(buildings["farm"]);
 			b.setOrigin(16, 64);
 			b.setPosition(getSectorPosition(i) + worldPosition);
 			b.setRotation(getSectorAngle(i));
