@@ -22,9 +22,21 @@ enum Relation
 #define STARTING_TECH 100
 #define STARTING_METAL 1000
 
+
+
 class Empire
 {
 public:
+
+
+	std::vector<Empire*> otherEmpires;
+
+	// Used for plots
+
+	std::vector<int> previousMoney = std::vector<int>();
+	std::vector<int> previousFood = std::vector<int>();
+	std::vector<int> previousTech = std::vector<int>();
+	std::vector<int> previousMetal = std::vector<int>();
 
 	std::string name = "NOT_SET";
 
@@ -37,7 +49,10 @@ public:
 	int metal = STARTING_METAL;
 	int metaldaily = 0;
 
-	int population = 0;
+	int happiness = 100;
+
+	int workers = 5;
+	int population = 10;
 	int soldiers = 0;
 
 
@@ -57,6 +72,12 @@ public:
 	// Called every day
 	void updateDaily()
 	{
+
+		previousMetal.push_back(metal);
+		previousFood.push_back(food);
+		previousTech.push_back(tech);
+		previousMoney.push_back(money);
+
 		if (launchCount != 0)
 		{
 			daysSinceLaunch++;
@@ -70,9 +91,12 @@ public:
 			}
 		}
 
+		int usedPopulation = 0;
+
 		for (int i = 0; i < planets.size(); i++)
 		{
 			// Do daily maintenance and daily generations
+			// Also calculate employment and run buildings as required
 			for (int t = 0; t < planets[i]->size; t++)
 			{
 				
@@ -148,6 +172,7 @@ enum PlayerState
 	VIEW_MODE,
 	CHOOSE_WORLD
 };
+
 
 
 
@@ -517,6 +542,15 @@ public:
 		ImGui::Button("People", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
 		ImGui::SameLine();
 		ImGui::BeginChild("EmpireSubPopulation", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Population: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i", linked->population);
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Soldiers: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i", linked->soldiers);
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Workers: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%%", (int)(((float)linked->workers / (float)linked->population) * 100.f));
 		ImGui::EndChild();
 		ImGui::SameLine();
 		ImGui::Button("Relations", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
@@ -672,9 +706,21 @@ public:
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "M");
 		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i", linked->happiness);
+		ImGui::SameLine();
+		if (linked->happiness > 0)
+		{
+			ImGui::TextColored(ImVec4(0.2, 1.0f, 0.2, 1.0f), ":)");
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.2, 0.2, 1.0f), "):");
+		}
+		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i", (int)(1 / frameAverage));
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "FPS");
+
 		//	ImGui::Image(magic, sf::Vector2f(16, 16), sf::FloatRect(0, 0, 16, 16));
 		ImGui::End();
 	}
@@ -910,5 +956,86 @@ public:
 		selector.loadFromFile("Resource/selector.png");
 
 		cursor = sf::Sprite(selector);
+	}
+};
+
+
+
+class EmpireManager
+{
+	
+
+public:
+
+	//Universe* universe;
+
+	EmpirePlayer* player;
+
+	std::vector<Empire> empires;
+
+	Universe* universe;
+
+	std::vector<EmpireAI> aiempires;
+
+	void update(sf::View* v, float dt, sf::Vector2f mousepos, sf::RenderWindow* win)
+	{
+		player->update(v, dt, mousepos, win);
+
+		for (int i = 0; i < aiempires.size(); i++)
+		{
+			aiempires[i].update(dt);
+		}
+	}
+
+	void render(sf::RenderWindow* win)
+	{
+		player->draw(win);
+	}
+
+	void createAIEmpire()
+	{
+		Empire n = Empire();
+		if (empires.size() != 0)
+		{
+			for (int i = 0; i < empires.size(); i++)
+			{
+				n.otherEmpires.push_back(&empires[i]);
+			}
+		}
+		EmpireAI nAi = EmpireAI();
+		empires.push_back(n);
+		nAi.linked = &empires[empires.size() - 1];
+		nAi.universe = universe;
+		// Add us to every other empire
+		for (int i = 0; i < empires.size() - 1; i++)
+		{
+			empires[i].otherEmpires.push_back(&empires[empires.size() - 1]);
+		}
+	}
+
+	void createPlayerEmpire()
+	{
+		Empire n = Empire();
+		
+		if (empires.size() != 0)
+		{
+			// Add every other empire to our empire
+			for (int i = 0; i < empires.size(); i++)
+			{
+				n.otherEmpires.push_back(&empires[i]);
+			}
+		}
+		empires.push_back(n);
+		player->linked = &empires[empires.size() - 1];
+		// Add us to every other empire
+		for (int i = 0; i < empires.size() - 1; i++)
+		{
+			empires[i].otherEmpires.push_back(&empires[empires.size() - 1]);
+		}
+	}
+
+	EmpireManager(Universe* universe)
+	{
+		this->universe = universe;
 	}
 };

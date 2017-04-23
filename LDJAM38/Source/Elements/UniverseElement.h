@@ -294,6 +294,11 @@ public:
 
 	}
 
+	Universe()
+	{
+
+	}
+
 	~Universe()
 	{
 

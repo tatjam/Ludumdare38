@@ -120,10 +120,13 @@ int main()
 
 	float frameAverage = 0.0f;
 
-	Empire empire0 = Empire();
-
 	EmpirePlayer empirePlayer = EmpirePlayer(&universe);
-	empirePlayer.linked = &empire0;
+	
+
+	EmpireManager manager = EmpireManager(&universe);
+	manager.player = &empirePlayer;
+	manager.createPlayerEmpire();
+
 	empirePlayer.resize(startSize.x, startSize.y);
 
 	while (window.isOpen())
@@ -169,9 +172,8 @@ int main()
 		window.setView(renderView);
 
 		mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
-		empirePlayer.update(&renderView, dt, mousePos, &window);
 
-
+		manager.update(&renderView, dt, mousePos, &window);
 
 	/*	backdrop.setTextureRect(sf::IntRect(
 			renderView.getCenter().x - (renderView.getSize().x/2), 
@@ -237,7 +239,7 @@ int main()
 		}
 		else
 		{
-			empirePlayer.draw(&window);
+			manager.render(&window);
 			sf::Vector2f oldPos = empirePlayer.focused->worldPosition;
 			empirePlayer.focused->worldPosition = sf::Vector2f(0.0f, 0.0f);
 			empirePlayer.focused->draw(&window, sf::Vector2f(0.0f, 0.0f));
