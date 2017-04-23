@@ -22,7 +22,7 @@
 
 #define BASE_STAR_COLOR sf::Color(255, 255, 145)
 
-#define G 500
+#define G 100
 
 
 
@@ -32,6 +32,25 @@
 class Universe
 {
 public:
+
+	std::string empireNames[12]
+	{
+		"Kerbal Space Program",
+		"Mr.Robot Enterprise",
+		"Space Connectors",
+		"Tiny Planet Corps",
+		"Jupiter Exploration",
+		"ComCast Communications",
+		"Space Explorer 9",
+		"Mann's Enterprise",
+		"Kepler's Vision",
+		"Xin-Yang Mining Corps",
+		"Nanotrasen",
+		"Syndicate",
+
+	};
+
+	std::vector<std::string> usedAINames;
 
 	std::string nameList[64]
 	{
@@ -215,10 +234,10 @@ public:
 				}
 			}
 
-			for (int i = 0; i < p->size; i++)
+			/*for (int i = 0; i < p->size; i++)
 			{
 				p->tiles[i] = rand() % 5;
-			}
+			}*/
 
 			printf("Generated planet (%i) %s: \n", i, p->name.c_str());
 			printf("Habitable: %i \n", p->easyHabitable);

@@ -20,17 +20,47 @@
 #define BUILDING_APPARTMENT 3
 #define BUILDING_FARM 4
 #define BUILDING_LAUNCHER 5
-#define BUILDING_WARPLACE 6
-#define BUILDING_MINE 7
+#define BUILDING_MINE 6
+#define BUILDING_WARPLACE 7
 #define BUILDING_MAGICPLACE 8
 
+#define BUILDING_TYPES 7
+
+
+// HOUSE
+#define HOUSE_PRICE 100
+#define HOUSE_MAINTENANCE 0
+#define HOUSE_HOUSING 5
+// LABORATORY
+#define LAB_PRICE 1000
+#define LAB_MAINTENANCE 5
+#define LAB_GENERATION 2
+#define LAB_EMPLOYMENT 10
+// APPARTMENT
+#define APP_PRICE 1000
+#define APP_MAINTENANCE 2
+#define APP_HOUSING 25
+// FARM
+#define FARM_PRICE 250
+#define FARM_MAINTENANCE 5
+#define FARM_GENERATION 10
+#define FARM_EMPLOYMENT 10
+// LAUNCHER
+#define LAUNCHER_PRICE 25000
+#define LAUNCHER_MAINTENANCE 50
+#define LAUNCHER_EMPLOYMENT 30
+// MINE
+#define MINE_PRICE 2000
+#define MINE_MAINTENANCE 20
+#define MINE_GENERATION 15
+#define MINE_EMPLOYMENT 20
 
 
 #define SECTOR_SIZE 32.0f
 
 class Planet;
 
-
+class Empire;
 
 class Planet
 {
@@ -47,9 +77,11 @@ private:
 	sf::Texture nightShadeTex;
 	sf::Texture atmo;
 
-	std::map<std::string, sf::Texture> buildings;
+	
 
 public:
+
+	std::map<std::string, sf::Texture> buildings;
 
 	std::string name;
 
@@ -66,6 +98,8 @@ public:
 
 	int size;
 
+	int usedtiles = 0;
+
 	float radius;
 
 	float distanceToStar = 0.0f;
@@ -76,6 +110,8 @@ public:
 
 	int population;
 	int soldiers;
+
+	Empire* owner;
 
 	std::vector<int> tiles;
 

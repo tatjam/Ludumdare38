@@ -34,6 +34,8 @@ int main()
 	sf::Texture house = sf::Texture();
 	sf::Texture lab = sf::Texture();
 	sf::Texture magic = sf::Texture();
+	sf::Texture launcher = sf::Texture();
+	sf::Texture mine = sf::Texture();
 
 	shade.loadFromFile("Resource/shade.png");
 	rock.loadFromFile("Resource/rock.png");
@@ -46,12 +48,16 @@ int main()
 	farm.loadFromFile("Resource/building/farm.png");
 	house.loadFromFile("Resource/building/house.png");
 	lab.loadFromFile("Resource/building/lab.png");
+	mine.loadFromFile("Resource/building/mine.png");
+	launcher.loadFromFile("Resource/building/launcher.png");
 	space.setRepeated(true);
 
 	buildings["apps"] = appartment;
 	buildings["farm"] = farm;
 	buildings["house"] = house;
 	buildings["lab"] = lab;
+	buildings["mine"] = mine;
+	buildings["launcher"] = launcher;
 
 	sf::Rect<float> empireWindow;
 	sf::Rect<float> systemWindow;
@@ -117,7 +123,7 @@ int main()
 	Empire empire0 = Empire();
 
 	EmpirePlayer empirePlayer = EmpirePlayer(&universe);
-
+	empirePlayer.linked = &empire0;
 	empirePlayer.resize(startSize.x, startSize.y);
 
 	while (window.isOpen())
@@ -160,7 +166,11 @@ int main()
 		frameAverage *= 0.5f;
 
 		
-		empirePlayer.update(&renderView, dt);
+		window.setView(renderView);
+
+		mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
+		empirePlayer.update(&renderView, dt, mousePos, &window);
+
 
 
 	/*	backdrop.setTextureRect(sf::IntRect(
@@ -169,23 +179,22 @@ int main()
 			renderView.getCenter().x + (renderView.getSize().x / 2),
 			renderView.getCenter().y + (renderView.getSize().y / 2)));
 	
-	*/
+	*/		
 
-		backdrop.setTextureRect(sf::IntRect(
-			renderView.getCenter().x - (renderView.getSize().x / 2),
-			renderView.getCenter().y - (renderView.getSize().y / 2),
-			renderView.getSize().x,
-			renderView.getSize().y
-			));
+		{
 
-		backdrop.setPosition(
-			renderView.getCenter().x - renderView.getSize().x / 2,
-			renderView.getCenter().y - renderView.getSize().y / 2);
 
-		window.setView(renderView);
+			backdrop.setTextureRect(sf::IntRect(
+				renderView.getCenter().x - (renderView.getSize().x / 2),
+				renderView.getCenter().y - (renderView.getSize().y / 2),
+				renderView.getSize().x,
+				renderView.getSize().y
+				));
 
-		mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
-
+			backdrop.setPosition(
+				renderView.getCenter().x - renderView.getSize().x / 2,
+				renderView.getCenter().y - renderView.getSize().y / 2);
+		}
 
 		timeStepper += dt * timeSpeed;
 		if (timeStepper >= 0.5f)
@@ -210,17 +219,34 @@ int main()
 		
 
 		mousePos -= p.worldPosition;
-		universe.update(dt * timeSpeed);
+		universe.update(dt * empirePlayer.timeSpeed);
 		//p.update(dt, false);
 
-		window.clear();
+		window.clear(sf::Color(17, 10, 32));
+		
 		window.draw(backdrop);
+
 		//window.draw(starSpr);
 
 		/*p.drawSector(p.getClosestSector(mousePos), &window, p.worldPosition);
 		p.draw(&window, sf::Vector2f(0, 0));*/
 
-		universe.draw(&window);
+		if (empirePlayer.state != PlayerState::EDIT_MODE)
+		{
+			universe.draw(&window);
+		}
+		else
+		{
+			empirePlayer.draw(&window);
+			sf::Vector2f oldPos = empirePlayer.focused->worldPosition;
+			empirePlayer.focused->worldPosition = sf::Vector2f(0.0f, 0.0f);
+			empirePlayer.focused->draw(&window, sf::Vector2f(0.0f, 0.0f));
+			empirePlayer.focused->worldPosition = oldPos;
+
+		}
+
+
+
 
 		ImGui::Render();
 		window.display();

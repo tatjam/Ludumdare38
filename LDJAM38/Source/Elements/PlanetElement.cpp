@@ -196,6 +196,10 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 				b = sf::Sprite(buildings["lab"]);
 			if (btype == BUILDING_FARM)
 				b = sf::Sprite(buildings["farm"]);
+			if (btype == BUILDING_MINE)
+				b = sf::Sprite(buildings["mine"]);
+			if (btype == BUILDING_LAUNCHER)
+				b = sf::Sprite(buildings["launcher"]);
 			b.setOrigin(16, 64);
 			b.setPosition(getSectorPosition(i) + worldPosition);
 			b.setRotation(getSectorAngle(i));

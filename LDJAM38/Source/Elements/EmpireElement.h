@@ -17,19 +17,69 @@ enum Relation
 	HATRED
 };
 
+#define STARTING_MONEY 5000
+#define STARTING_FOOD 10000
+#define STARTING_TECH 100
+#define STARTING_METAL 1000
+
 class Empire
 {
 public:
 
-	int money = 0;
-	int food = 0;
-	int tech = 0;
-	int metal = 0;
+	std::string name = "NOT_SET";
+
+	int money = STARTING_MONEY;
+	int moneydaily = 0;
+	int food = STARTING_FOOD;
+	int fooddaily = 0;
+	int tech = STARTING_TECH;
+	int techdaily = 0;
+	int metal = STARTING_METAL;
+	int metaldaily = 0;
 
 	int population = 0;
 	int soldiers = 0;
 
+
+	int launcherCount = 0;
+	int launchCount = 0;
+	int daysSinceLaunch = 0;
+
+	bool canLaunch = false;
+
 	std::vector<Planet*> planets;
+
+	Empire()
+	{
+		planets = std::vector<Planet*>();
+	}
+
+	// Called every day
+	void updateDaily()
+	{
+		if (launchCount != 0)
+		{
+			daysSinceLaunch++;
+		}
+
+		if (launchCount > 0)
+		{
+			if (daysSinceLaunch > (int)((1.0f / (float)launcherCount) * 365.f))
+			{
+				canLaunch = true;
+			}
+		}
+
+		for (int i = 0; i < planets.size(); i++)
+		{
+			// Do daily maintenance and daily generations
+			for (int t = 0; t < planets[i]->size; t++)
+			{
+				
+			}
+		}
+	}
+
 
 };
 
@@ -37,12 +87,57 @@ public:
 class EmpireAI
 {
 public:
+
+
+
+	bool firstframe = false;
+
 	Empire* linked;
 	std::map<Empire*, Relation> relations;
+
+	Universe* universe;
 
 	void update(float dt)
 	{
 		// Complex sentient AI incoming
+
+
+		if (firstframe)
+		{
+			// Choose our planet
+
+			bool valid = false;
+
+
+			while (!valid)
+			{
+				int i = rand() % universe->count;
+				if (universe->planets[i]->owner == NULL)
+				{
+					linked->planets.push_back(universe->planets[i]);
+					universe->planets[i]->owner = linked;
+				}
+			}
+
+			valid = false;
+
+			while (!valid)
+			{
+				linked->name == universe->nameList[rand() % 11];
+				if (std::find(universe->usedAINames.begin(), universe->usedAINames.end(), linked->name) 
+					== universe->usedAINames.end())
+				{
+					valid = true;
+				}
+			}
+
+		
+		}
+		else
+		{
+			// Play the game :3
+
+		}
 
 	}
 };
@@ -50,7 +145,8 @@ public:
 enum PlayerState
 {
 	EDIT_MODE,
-	VIEW_MODE
+	VIEW_MODE,
+	CHOOSE_WORLD
 };
 
 
@@ -61,7 +157,7 @@ public:
 	Universe* universe;
 	Empire* linked;
 
-	PlayerState state = PlayerState::VIEW_MODE;
+	PlayerState state = PlayerState::CHOOSE_WORLD;
 
 	sf::FloatRect systemWindow;
 	sf::FloatRect empireWindow;
@@ -75,10 +171,286 @@ public:
 	int month = 1;
 	int year = 2100;
 
+	sf::Texture selector;
+
+	sf::Sprite cursor;
 
 	bool ecoWindow = false;
 	bool popWindow = false;
 	bool retWindow = false;
+
+	bool contains(std::vector<Planet*>* planets, Planet* planet)
+	{
+		if (std::find(planets->begin(), planets->end(), planet) != planets->end())
+		{
+			return true;
+		}
+		return false;
+	}
+
+	bool shown = false;
+
+	char nameBuff[256];
+
+	int choosenTileType = 0;
+
+	int tileC = 0;
+
+	std::string choosenTileName;
+
+	sf::Texture* choosenTileImage;
+
+	sf::Vector2f editorOffset = sf::Vector2f(0.0f, 0.0f);
+
+	void drawEditorUI()
+	{
+		ImGui::Begin("Tiles");
+
+		for (int i = 1; i < BUILDING_TYPES; i++)
+		{
+			/*if (i == choosenTileType)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.3f, 1.0f));
+			}*/
+
+			if (i == BUILDING_APPARTMENT)
+			{
+				if (ImGui::ImageButton(focused->buildings["apps"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["apps"];
+					choosenTileName = "Appartment Block";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("APPSSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", APP_PRICE);
+				ImGui::TextWrapped("%i people can live inside. %iC maintenance", APP_HOUSING, APP_MAINTENANCE);
+				ImGui::EndChild();
+			}
+			else if (i == BUILDING_FARM)
+			{
+				if (ImGui::ImageButton(focused->buildings["farm"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["farm"];
+					choosenTileName = "Farm";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("FARMSSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", FARM_PRICE);
+				ImGui::TextWrapped("Generates %i food every day. Uses %iC to do so. Employs %i persons", 
+					FARM_GENERATION, FARM_MAINTENANCE, FARM_EMPLOYMENT);
+				ImGui::EndChild();
+			}
+			else if (i == BUILDING_LABORATORY)
+			{
+				if (ImGui::ImageButton(focused->buildings["lab"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["lab"];
+					choosenTileName = "Laboratory";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("LABSSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", LAB_PRICE);
+				ImGui::TextWrapped("Generates %i science every day. Uses %iC to do so. Employs %i persons",
+					LAB_GENERATION, LAB_MAINTENANCE, LAB_EMPLOYMENT);
+				ImGui::EndChild();
+			}
+			else if (i == BUILDING_HOUSE)
+			{
+				if (ImGui::ImageButton(focused->buildings["house"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["house"];
+					choosenTileName = "House";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("HOUSESSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", HOUSE_PRICE);
+				ImGui::TextWrapped("%i people can live inside. %iC maintenance", HOUSE_HOUSING, HOUSE_MAINTENANCE);
+				ImGui::EndChild();
+			}
+			else if (i == BUILDING_MINE)
+			{
+				if (ImGui::ImageButton(focused->buildings["mine"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["mine"];
+					choosenTileName = "Mining Station";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("MINESSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", MINE_PRICE);
+				ImGui::TextWrapped("Extracts metal depending on the planet's concentration (Base %i). %iC every month",
+					MINE_GENERATION, MINE_MAINTENANCE);
+				ImGui::EndChild();
+			}
+			else if (i == BUILDING_LAUNCHER)
+			{
+				if (ImGui::ImageButton(focused->buildings["launcher"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["launcher"];
+					choosenTileName = "Space Launch Site";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("LAUNCHSSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", LAUNCHER_PRICE);
+				ImGui::TextWrapped("Allows you to launch a vehicle twice every year. 15000C every launch and %iC maintenance",
+					LAUNCHER_MAINTENANCE);
+				ImGui::EndChild();
+			}
+
+			/*if (i == choosenTileType)
+			{
+				ImGui::PopStyleColor(1);
+			}*/
+		}
+
+		ImGui::End();
+
+		ImGui::Begin("Choosen Tile");
+		if (choosenTileType != 0)
+		{
+			ImGui::Image(*choosenTileImage);
+			ImGui::Text("%s selected", choosenTileName.c_str());
+		}
+		else
+		{
+			ImGui::Text("No tile selected");
+		}
+
+		ImGui::Separator();
+
+		ImGui::Text("Tile: %i", tileC);
+		switch (focused->tiles[tileC])
+		{
+		case BUILDING_EMPTY:
+			ImGui::Text("Nothing built");
+			break;
+		case BUILDING_APPARTMENT:
+			ImGui::Image(focused->buildings["apps"]);
+			ImGui::Text("Appartment Block");
+			break;
+		case BUILDING_FARM:
+			ImGui::Image(focused->buildings["farm"]);
+			ImGui::Text("Farm");;
+			break;
+		case BUILDING_LABORATORY:
+			ImGui::Image(focused->buildings["lab"]);
+			ImGui::Text("Laboratory");
+			break;
+		case BUILDING_HOUSE:
+			ImGui::Image(focused->buildings["house"]);
+			ImGui::Text("House");
+			break;
+		}
+
+		if (focused->tiles[tileC] != 0)
+		{
+			if (ImGui::Button("Destroy"))
+			{
+				focused->tiles[tileC] = 0;
+				focused->usedtiles--;
+			}
+		}
+
+		ImGui::End();
+	}
+
+	void drawWorldChooserWindow()
+	{
+		int citem;
+
+
+
+
+		if (shown == true)
+		{
+			ImGui::Begin(focused->name.c_str(), NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+			ImGui::Text("Info about %s", focused->name.c_str());
+			ImGui::Text("Size: %i", focused->size);
+			if (focused->easyHabitable)
+			{
+				ImGui::TextColored(ImVec4(0.2, 1.0, 0.2, 1.0), "Habitable");
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "Not-Habitable");
+			}
+			if (focused->hasAtmosphere)
+			{
+				ImGui::TextColored(ImVec4(0.2, 1.0, 0.2, 1.0), "Has Atmosphere");
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "No Atmosphere");
+			}
+
+			ImGui::InputText("Civ Name", nameBuff, 256);
+
+			if (ImGui::Button("Choose"))
+			{
+				// Choose this planet
+				linked->planets.push_back(focused);
+				focused->owner = linked;
+				state = PlayerState::VIEW_MODE;
+
+				linked->name = std::string(nameBuff);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel"))
+			{
+				focused = NULL;
+				shown = false;
+			}
+			ImGui::Separator();
+			ImGui::Text("Tip: Check the manual for help");
+			ImGui::End();
+		}
+
+		ImGui::Begin("Choose starting world", NULL, ImGuiWindowFlags_NoCollapse);
+
+		ImGui::TextWrapped("Habitable worlds are easier to start with, but have less minerals than Non-Habitable ones");
+		ImGui::Separator();
+
+		for (int i = 0; i < universe->count; i++)
+		{
+			if (ImGui::Button(universe->planets[i]->name.c_str()))
+			{
+				focused = universe->planets[i];
+				shown = true;
+			}
+
+			ImGui::Text("Size: %i", universe->planets[i]->size);
+
+			if (universe->planets[i]->easyHabitable == true)
+			{
+				ImGui::TextColored(ImVec4(0.2, 1.0, 0.2, 1.0), "Habitable");
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "Non-Habitable");
+			}
+
+			ImGui::Separator();
+		}
+
+		ImGui::End();
+	}
 
 	void drawEmpireWindow()
 	{
@@ -96,21 +468,34 @@ public:
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Focused on ");
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", focused->name.c_str());
-			ImGui::SameLine();
-			ImGui::Spacing();
-			ImGui::SameLine();
-			ImGui::Button("Edit", ImVec2(40, 16));
+			if (focused->owner == linked)
+			{
+				ImGui::SameLine();
+				ImGui::Spacing();
+				ImGui::SameLine();
+				if (ImGui::Button("Edit", ImVec2(40, 16)))
+				{
+					state = PlayerState::EDIT_MODE;
+				}
+			}
 			ImGui::Separator();
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Owner: ");
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "MR.Robot enterprise");
+			if (focused->owner != NULL)
+			{
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", focused->owner->name.c_str());
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No Owner");
+			}
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Population: ");
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "12312");
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "| Tiles: ");
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i/%i", 10, focused->size);
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i/%i", focused->usedtiles, focused->size);
 		}
 		else
 		{
@@ -165,14 +550,22 @@ public:
 
 		for (int i = 0; i < universe->count; i++)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.4f, 0.2f, 1.0f));
+			bool isPlanetOurs = contains(&linked->planets, universe->planets[i]);
 
+			if (isPlanetOurs)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.4f, 0.2f, 1.0f));
+			}
 			if (ImGui::Button(universe->planets[i]->name.c_str()))
 			{
 				focused = universe->planets[i];
+				state = PlayerState::VIEW_MODE;
 			}
 
-			ImGui::PopStyleColor(1);
+			if (isPlanetOurs)
+			{
+				ImGui::PopStyleColor(1);
+			}
 
 			if (i < universe->count - 1)
 			{
@@ -199,7 +592,7 @@ public:
 				timeSpeed = 1;
 			}
 		}
-		else if (timeSpeed == 4)
+		else if (timeSpeed == 6)
 		{
 			if (ImGui::Button("<<"))
 			{
@@ -242,14 +635,14 @@ public:
 		{
 			if (ImGui::Button(">>"))
 			{
-				timeSpeed = 4;
+				timeSpeed = 6;
 			}
 		}
-		else if (timeSpeed == 4)
+		else if (timeSpeed == 6)
 		{
 			if (ImGui::Button("-|"))
 			{
-				timeSpeed = 4;
+				timeSpeed = 6;
 			}
 		}
 		else
@@ -263,19 +656,19 @@ public:
 		ImGui::Separator();
 		ImGui::TextColored(ImVec4(255, 255, 255, 1.0f), "Empire: ");
 		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "123456");
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%i (%i/d)", linked->money, linked->moneydaily);
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(255, 255, 0, 1.0f), "C");
 		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i (%i/d)", linked->food, linked->fooddaily);
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.8f, 0.7f, 0.1f, 1.0f), "F");
 		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i (%i/d)", linked->tech, linked->techdaily);
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.9f, 1.0f), "T");
 		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i (%i/d)", linked->metal, linked->metaldaily);
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "M");
 		ImGui::SameLine();
@@ -286,6 +679,10 @@ public:
 		ImGui::End();
 	}
 
+
+	bool allowMove = true;
+	bool wasRightDown = false;
+	
 	void drawUI(PlayerState state)
 	{
 		if (state == PlayerState::VIEW_MODE)
@@ -298,17 +695,24 @@ public:
 		else if (state == PlayerState::EDIT_MODE)
 		{
 			drawSystemWindow();
+			drawEditorUI();
+		}
+		else if (state == PlayerState::CHOOSE_WORLD)
+		{
+			drawWorldChooserWindow();
 		}
 	}
+	
+	bool wasMousePressed = false;
 
-	void update(sf::View* v, float dt)
+	void update(sf::View* v, float dt, sf::Vector2f mousePos, sf::RenderWindow* win)
 	{
 
 		frameAverage += dt;
 		frameAverage /= 2;
 
 		timeStepper += dt * timeSpeed;
-		if (timeStepper >= 0.5f)
+		if (timeStepper >= 1.0f)
 		{
 			timeStepper = 0.0f;
 			day++;
@@ -326,13 +730,15 @@ public:
 
 		drawUI(state);
 
-		if (focused != NULL)
-		{
-			v->setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
-		}
+
 
 		if (state == PlayerState::VIEW_MODE)
 		{
+
+			if (focused != NULL)
+			{
+				v->setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
+			}
 
 			if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
 			{
@@ -367,6 +773,123 @@ public:
 				v->zoom(0.998f);
 			}
 		}
+		else if (state == PlayerState::EDIT_MODE)
+		{
+			/*if (focused != NULL)
+			{
+				v->setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
+			}*/
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+			{
+				editorOffset.y -= 100.0f * dt;
+			}
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+			{
+				editorOffset.x -= 100.0f * dt;
+			}
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+			{
+				editorOffset.y += 100.0f * dt;
+			}
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+			{
+				editorOffset.x += 100.0f * dt;
+			}
+
+			v->setCenter(sf::Vector2f(focused->radius + editorOffset.x, focused->radius + editorOffset.y));
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
+			{
+				v->zoom(1.002f);
+			}
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::F))
+			{
+				v->zoom(0.998f);
+			}
+
+			//mousePos += sf::Vector2f(focused->radius * 5, focused->radius * 5);
+
+			mousePos = win->mapPixelToCoords((sf::Vector2i)mousePos);
+
+			if (allowMove)
+			{
+
+				tileC = focused->getClosestSector(mousePos);
+
+			}
+			cursor.setOrigin(16, 64);
+
+
+			cursor.setPosition(focused->getSectorPosition(tileC));
+			cursor.setRotation(focused->getSectorAngle(tileC));
+
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && !ImGui::GetIO().WantCaptureMouse)
+			{
+				if (!wasMousePressed)
+				{
+
+
+					if (choosenTileType != 0)
+					{
+						if (focused->tiles[tileC] == 0)
+						{
+							focused->tiles[tileC] = choosenTileType;
+							focused->usedtiles++;
+						}
+						// BUY THE TILE
+					}
+
+					wasMousePressed = true;
+				}
+				
+			}
+			else
+			{
+				wasMousePressed = false;
+			}
+			
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right) && !ImGui::GetIO().WantCaptureMouse)
+			{
+				if (!wasRightDown)
+				{
+					allowMove = !allowMove;
+					wasRightDown = true;
+				}
+			}
+			else
+			{
+				wasRightDown = false;
+			}
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+			{
+				state = PlayerState::VIEW_MODE;
+			}
+
+
+			/*printf("Drawing cursor at tile: %i {%f, %f} {%f, %f}\n", tileC, cursor.getPosition().x, 
+				cursor.getPosition().y, focused->worldPosition.x, focused->worldPosition.y);
+			printf("Mouse pos {%f, %f}\n", mousePos.x, mousePos.y);*/
+		}
+		else if(state == PlayerState::CHOOSE_WORLD)
+		{
+			if (focused != NULL)
+			{
+				v->setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
+			}
+		}
+	}
+
+	void draw(sf::RenderWindow* win)
+	{
+		if (focused != NULL)
+		{
+			win->draw(cursor);
+		}
 	}
 
 	void resize(int width, int height)
@@ -382,5 +905,10 @@ public:
 	EmpirePlayer(Universe* universe)
 	{
 		this->universe = universe;
+
+		selector = sf::Texture();
+		selector.loadFromFile("Resource/selector.png");
+
+		cursor = sf::Sprite(selector);
 	}
 };
