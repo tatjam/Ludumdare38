@@ -19,12 +19,15 @@ int main()
 {
 	float backdropScale = 0.0f;
 
+	std::map<std::string, sf::Texture> buildings;
+
 	sf::Texture shade = sf::Texture();
 	sf::Texture rock = sf::Texture();
 	sf::Texture night = sf::Texture();
 	sf::Texture space = sf::Texture();
 	sf::Texture atmo = sf::Texture();
 	sf::Texture star = sf::Texture();
+	sf::Texture appartment = sf::Texture();
 	sf::Texture magic = sf::Texture();
 
 	shade.loadFromFile("Resource/shade.png");
@@ -34,7 +37,10 @@ int main()
 	star.loadFromFile("Resource/star.png");
 	space.loadFromFile("Resource/space.png");
 	magic.loadFromFile("Resource/magic.png");
+	appartment.loadFromFile("Resource/building/appartment.png");
 	space.setRepeated(true);
+
+	buildings["apps"] = appartment;
 
 	sf::Rect<float> empireWindow;
 	sf::Rect<float> systemWindow;
@@ -67,7 +73,7 @@ int main()
 	//window.resetGLStates();
 
 
-	Planet p = Planet(8, shade, rock, night, atmo);
+	Planet p = Planet(8, shade, rock, night, atmo, buildings);
 	p.hasAtmosphere = true;
 	p.atmosphereColor = sf::Color(195, 244, 255, 128);
 	p.surfaceColor = sf::Color(170, 213, 119);
@@ -76,7 +82,7 @@ int main()
 	p.makeDrawables();
 	sf::Vector2f mousePos;
 
-	Universe universe = Universe(star, shade, rock, night, atmo, time(NULL));
+	Universe universe = Universe(star, shade, rock, night, atmo, buildings, time(NULL));
 	universe.generate();
 
 	starSpr.setPosition(sf::Vector2f(32, 32));
@@ -92,6 +98,8 @@ int main()
 	int year = 2100;
 	
 	float timeStepper = 0.0f;
+
+	Planet* focused = NULL;
 
 	while (window.isOpen())
 	{
@@ -120,22 +128,36 @@ int main()
 				printf("Now scale %f\n", backdropScale);
 			}
 		}
+
+		if (focused != NULL)
+		{
+			renderView.setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
+			printf("Focused on: %s", focused->name.c_str());
+		}
 		
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
 		{
-			renderView.move(sf::Vector2f(0, -1000.0f) * dt);
+			if(focused == NULL)
+				renderView.move(sf::Vector2f(0, -1000.0f) * dt);
+			focused = NULL;
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
 		{
-			renderView.move(sf::Vector2f(-1000.0, 0.0f) * dt);
+			if (focused == NULL)
+				renderView.move(sf::Vector2f(-1000.0, 0.0f) * dt);
+			focused = NULL;
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
 		{
-			renderView.move(sf::Vector2f(0, 1000.0f) * dt);
+			if (focused == NULL)
+				renderView.move(sf::Vector2f(0, 1000.0f) * dt);
+			focused = NULL;
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
 		{
-			renderView.move(sf::Vector2f(1000.0f, 0.0f) * dt);
+			if (focused == NULL)
+				renderView.move(sf::Vector2f(1000.0f, 0.0f) * dt);
+			focused = NULL;
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
 		{
@@ -216,7 +238,10 @@ int main()
 		{
 			if (i % 2 == 0)
 			{
-				ImGui::Button(universe.planets[i]->name.c_str());
+				if (ImGui::Button(universe.planets[i]->name.c_str()))
+				{
+					focused = universe.planets[i];
+				}
 			}
 			else
 			{

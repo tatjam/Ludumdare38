@@ -2,7 +2,8 @@
 
 
 
-Planet::Planet(int size, sf::Texture shade, sf::Texture rock, sf::Texture night, sf::Texture atmo)
+Planet::Planet(int size, sf::Texture shade, sf::Texture rock, sf::Texture night, 
+	sf::Texture atmo, std::map<std::string, sf::Texture> buildings)
 {
 	this->size = size;
 	population = 0;
@@ -10,7 +11,7 @@ Planet::Planet(int size, sf::Texture shade, sf::Texture rock, sf::Texture night,
 
 	worldPosition = sf::Vector2f(0, 0);
 
-	buildings = std::map<int, Building>();
+	this->buildings = buildings;
 
 	this->rotation = -90.0f;
 
@@ -20,6 +21,8 @@ Planet::Planet(int size, sf::Texture shade, sf::Texture rock, sf::Texture night,
 	this->rock = rock;
 	this->nightShadeTex = night;
 	this->atmo = atmo;
+
+	this->tiles = std::vector<int>(size, 0);
 }
 
 void Planet::update(float dt, bool rotate)
@@ -177,6 +180,20 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 
 	atmoSpr.setRotation(rotationN);
 
+
+	// Draw all buildings
+	for (int i = 0; i < size; i++)
+	{
+		int btype = tiles[i];
+		if (btype == 0)
+		{
+			sf::Sprite b = sf::Sprite(buildings["apps"]);
+			b.setOrigin(16, 64);
+			b.setPosition(getSectorPosition(i) + worldPosition);
+			b.setRotation(getSectorAngle(i));
+			win->draw(b);
+		}
+	}
 	if (hasAtmosphere)
 	{
 		win->draw(atmoSpr);
@@ -184,5 +201,8 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 	win->draw(land);
 	win->draw(crust);
 	win->draw(inner);
+
 	win->draw(nightShade);
+
+
 }

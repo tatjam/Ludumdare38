@@ -14,32 +14,19 @@
 #define PI 3.14159
 #define TAU 6.283185
 
-#define BUILDING_HOUSE 0
-#define BUILDING_LABORATORY 1
-#define BUILDING_LAUNCHER 2
-#define BUILDING_WARPLACE 3
-#define BUILDING_MINE 4
-#define BUILDING_MAGICPLACE 5
-#define BUILDING_FARM 6
-#define BUILDING_APPARTMENT 7
+#define BUILDING_EMPTY 0
+#define BUILDING_HOUSE 1
+#define BUILDING_LABORATORY 2
+#define BUILDING_LAUNCHER 3
+#define BUILDING_WARPLACE 4
+#define BUILDING_MINE 5
+#define BUILDING_MAGICPLACE 6
+#define BUILDING_FARM 7
+#define BUILDING_APPARTMENT 8
 
 #define SECTOR_SIZE 32.0f
 
 class Planet;
-
-class Building
-{
-public:
-
-	int type = 0;
-
-	void draw();
-
-	Building()
-	{}
-	~Building()
-	{}
-};
 
 class Empire
 {
@@ -69,7 +56,7 @@ private:
 	sf::Texture nightShadeTex;
 	sf::Texture atmo;
 
-
+	std::map<std::string, sf::Texture> buildings;
 
 public:
 
@@ -99,7 +86,7 @@ public:
 	int population;
 	int soldiers;
 
-	std::map<int, Building> buildings;
+	std::vector<int> tiles;
 
 	void makeDrawables();
 	void draw(sf::RenderWindow* win, sf::Vector2f sunloc);
@@ -118,7 +105,8 @@ public:
 	void update(float dt, bool rotate);
 
 	// Size must be even not uneven!
-	Planet(int size, sf::Texture shade, sf::Texture rock, sf::Texture night, sf::Texture atmo);
+	Planet(int size, sf::Texture shade, sf::Texture rock, 
+		sf::Texture night, sf::Texture atmo, std::map<std::string, sf::Texture> buildings);
 	~Planet();
 };
 

@@ -105,6 +105,8 @@ public:
 	sf::Texture rock; sf::Texture night; 
 	sf::Texture atmo;
 
+	std::map<std::string, sf::Texture> buildings;
+
 	sf::Sprite starSpr;
 
 	int seed, count, habitables;
@@ -133,7 +135,7 @@ public:
 			{
 				size += 1;
 			}
-			Planet* p = new Planet(size, shade, rock, night, atmo);
+			Planet* p = new Planet(size, shade, rock, night, atmo, buildings);
 			sf::Vector2f pos;
 			bool valid = false;
 			while (!valid)
@@ -235,8 +237,8 @@ public:
 	}
 
 	Universe(sf::Texture star, sf::Texture shade, 
-		sf::Texture rock, sf::Texture night, sf::Texture atmo,
-		int seed)
+		sf::Texture rock, sf::Texture night, sf::Texture atmo, 
+		std::map<std::string, sf::Texture> buildings, int seed)
 	{
 		this->star = star;
 		this->shade = shade;
@@ -244,6 +246,7 @@ public:
 		this->night = night;
 		this->atmo = atmo;
 		this->seed = seed;
+		this->buildings = buildings;
 
 	}
 
