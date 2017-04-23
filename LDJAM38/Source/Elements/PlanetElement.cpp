@@ -165,11 +165,17 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 	nightShade.setPosition(sf::Vector2f(worldPosition.x + radius, worldPosition.y + radius));
 	atmoSpr.setPosition(sf::Vector2f(worldPosition.x + radius, worldPosition.y + radius));
 
-	nightShade.setRotation(rotation);
+	int rotationN = 0;
+	// Get angle to star (0, 0)
+	float angle = angleInStar;
+
+	rotationN = (angle * 180) / PI + 180;
+
+	nightShade.setRotation(rotationN);
 	crust.setRotation(rotation);
 	land.setRotation(rotation);
 
-	atmoSpr.setRotation(rotation);
+	atmoSpr.setRotation(rotationN);
 
 	if (hasAtmosphere)
 	{

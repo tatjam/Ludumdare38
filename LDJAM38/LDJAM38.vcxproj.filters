@@ -59,5 +59,11 @@
     <ClInclude Include="Source\Elements\PlanetElement.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Elements\UniverseElement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Elements\EmpireElement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

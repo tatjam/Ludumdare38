@@ -131,7 +131,9 @@
     <ClCompile Include="Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Elements\EmpireElement.h" />
     <ClInclude Include="Source\Elements\PlanetElement.h" />
+    <ClInclude Include="Source\Elements\UniverseElement.h" />
     <ClInclude Include="Source\ImGui\imconfig.h" />
     <ClInclude Include="Source\ImGui\imgui-SFML.h" />
     <ClInclude Include="Source\ImGui\imgui.h" />

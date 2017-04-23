@@ -73,6 +73,10 @@ private:
 
 public:
 
+	std::string name;
+
+	bool easyHabitable = false;
+
 	bool hasAtmosphere;
 	sf::Color atmosphereColor;
 	sf::Color crustColor;
@@ -85,6 +89,9 @@ public:
 	int size;
 
 	float radius;
+
+	float distanceToStar = 0.0f;
+	float angleInStar = 0.0f;
 
 	float rotation;
 	float rotationSpeed;
