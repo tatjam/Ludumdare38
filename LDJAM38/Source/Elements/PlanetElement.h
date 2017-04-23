@@ -108,6 +108,10 @@ public:
 	float rotation;
 	float rotationSpeed;
 
+	float mineralBoost = 1.0f;
+	float scienceBoost = 1.0f;
+	float foodBoost = 1.0f;
+
 	int population;
 	int soldiers;
 

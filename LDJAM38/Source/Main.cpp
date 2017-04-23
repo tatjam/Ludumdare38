@@ -127,6 +127,10 @@ int main()
 	manager.player = &empirePlayer;
 	manager.createPlayerEmpire();
 
+	manager.createAIEmpire();
+	manager.createAIEmpire();
+	manager.createAIEmpire();
+
 	empirePlayer.resize(startSize.x, startSize.y);
 
 	while (window.isOpen())
@@ -203,6 +207,10 @@ int main()
 		{
 			timeStepper = 0.0f;
 			day++;
+			if (manager.player->state != PlayerState::CHOOSE_WORLD)
+			{
+				manager.updateDaily();
+			}
 			if (day > 30)
 			{
 				month++;

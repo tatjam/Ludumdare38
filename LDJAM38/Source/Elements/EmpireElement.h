@@ -22,12 +22,15 @@ enum Relation
 #define STARTING_TECH 100
 #define STARTING_METAL 1000
 
+#define FOOD_PER_PERSON 2.0f
 
+class EmpireAI;
 
 class Empire
 {
 public:
 
+	EmpireAI* aicontroller;
 
 	std::vector<Empire*> otherEmpires;
 
@@ -51,7 +54,10 @@ public:
 
 	int happiness = 100;
 
-	int workers = 5;
+	int workplaces = 0;
+
+	int workers = 0;
+	int housed = 0;
 	int population = 10;
 	int soldiers = 0;
 
@@ -62,16 +68,26 @@ public:
 
 	bool canLaunch = false;
 
+	int total_houses = 0;
+
+	float taxes = 0.5f;
+
 	std::vector<Planet*> planets;
 
 	Empire()
 	{
 		planets = std::vector<Planet*>();
+		previousMoney.push_back(STARTING_MONEY);
+		previousFood.push_back(STARTING_FOOD);
+		previousMetal.push_back(STARTING_METAL);
+		previousTech.push_back(STARTING_TECH);
 	}
 
 	// Called every day
 	void updateDaily()
 	{
+
+		happiness = 0;
 
 		previousMetal.push_back(metal);
 		previousFood.push_back(food);
@@ -93,15 +109,162 @@ public:
 
 		int usedPopulation = 0;
 
+		int housedPopulation = 0;
+
+
+		int houses = 0;
+
+		techdaily = 0;
+		moneydaily = 0;
+		fooddaily = 0;
+		metaldaily = 0;
+
+
+
+		workplaces = 0;
+
+		int freePopulation = population;
+
 		for (int i = 0; i < planets.size(); i++)
 		{
 			// Do daily maintenance and daily generations
 			// Also calculate employment and run buildings as required
 			for (int t = 0; t < planets[i]->size; t++)
 			{
-				
+				if (planets[i]->tiles[t] != 0)
+				{
+					switch (planets[i]->tiles[t])
+					{
+					case BUILDING_HOUSE:
+						money -= HOUSE_MAINTENANCE;
+						moneydaily -= HOUSE_MAINTENANCE;
+						if (money >= HOUSE_MAINTENANCE)
+						{
+							if (housedPopulation + HOUSE_HOUSING > population)
+							{
+								housedPopulation = population;
+							}
+							else
+							{
+								housedPopulation += HOUSE_HOUSING;
+							}
+
+							houses += HOUSE_HOUSING;
+						}
+						break;
+					case BUILDING_LABORATORY:
+						
+						workplaces += LAB_EMPLOYMENT;
+						money -= LAB_MAINTENANCE;
+						moneydaily -= LAB_MAINTENANCE;
+						if (money >= LAB_MAINTENANCE && usedPopulation < population)
+						{
+							tech += LAB_GENERATION;
+							techdaily += LAB_GENERATION;
+
+						}
+						if (usedPopulation + LAB_EMPLOYMENT < population)
+						{
+							usedPopulation += LAB_EMPLOYMENT;
+						}
+						else
+						{
+							usedPopulation = population;
+						}
+						break;
+					case BUILDING_APPARTMENT:
+						money -= APP_MAINTENANCE;
+						moneydaily -= APP_MAINTENANCE;
+						if (money >= APP_MAINTENANCE) {
+							if(housedPopulation + APP_HOUSING > population)
+							{ 
+								housedPopulation = population;
+							}
+							else
+							{
+								housedPopulation += APP_HOUSING;
+							}
+
+							houses += APP_HOUSING;
+						}
+						break;
+					case BUILDING_FARM:
+						workplaces += FARM_EMPLOYMENT;
+						money -= FARM_MAINTENANCE;
+						moneydaily -= FARM_MAINTENANCE;
+
+						if (money >= FARM_MAINTENANCE && usedPopulation < population)
+						{
+							food += FARM_GENERATION;
+
+						}
+
+						if (usedPopulation + LAB_EMPLOYMENT < population)
+						{
+							usedPopulation += LAB_EMPLOYMENT;
+						}
+						else
+						{
+							usedPopulation = population;
+						}
+
+						break;
+					}
+				}
 			}
 		}
+
+		if (housed >= population)
+		{
+			happiness += 10;
+		}
+		else if (housed >= population * 0.8)
+		{
+			happiness += 3;
+		}
+		else if (housed >= population * 0.5)
+		{
+			happiness -= 1;
+		}
+		else
+		{
+			happiness -= 15;
+		}
+
+		if (workers >= population)
+		{
+			happiness += 10;
+		}
+		else if (workers >= population * 0.8)
+		{
+			happiness += 3;
+		}
+		else if (workers >= population * 0.5)
+		{
+			happiness -= 2;
+		}
+		else
+		{
+			happiness -= 10;
+		}
+
+		if (taxes == 0)
+		{
+			happiness += 25;
+		}
+		else
+		{
+			// We use -1.5(x-2)^3 as our happiness formula
+			happiness += powf(-1.5f*(taxes - 2.0f), 3.0f);
+		}
+
+		workers = usedPopulation;
+		housed = housedPopulation;
+
+		total_houses = houses;
+		// Generate money from taxes (only employed pays)
+		money += (int)((float)taxes * (float)usedPopulation);
+		moneydaily += (int)((float)taxes * (float)usedPopulation);
 	}
 
 
@@ -114,12 +277,17 @@ public:
 
 
 
-	bool firstframe = false;
+	bool firstframe = true;
 
 	Empire* linked;
 	std::map<Empire*, Relation> relations;
 
 	Universe* universe;
+
+	void updateDaily()
+	{
+		linked->updateDaily();
+	}
 
 	void update(float dt)
 	{
@@ -129,6 +297,7 @@ public:
 		if (firstframe)
 		{
 			// Choose our planet
+			linked->aicontroller = this;
 
 			bool valid = false;
 
@@ -140,6 +309,7 @@ public:
 				{
 					linked->planets.push_back(universe->planets[i]);
 					universe->planets[i]->owner = linked;
+					valid = true;
 				}
 			}
 
@@ -147,15 +317,16 @@ public:
 
 			while (!valid)
 			{
-				linked->name == universe->nameList[rand() % 11];
+				linked->name = universe->empireNames[rand() % 11];
 				if (std::find(universe->usedAINames.begin(), universe->usedAINames.end(), linked->name) 
 					== universe->usedAINames.end())
 				{
 					valid = true;
+					universe->usedAINames.push_back(linked->name);
 				}
 			}
 
-		
+			firstframe = false;
 		}
 		else
 		{
@@ -179,6 +350,8 @@ enum PlayerState
 class EmpirePlayer
 {
 public:
+
+
 	Universe* universe;
 	Empire* linked;
 
@@ -203,6 +376,23 @@ public:
 	bool ecoWindow = false;
 	bool popWindow = false;
 	bool retWindow = false;
+
+
+	// Gets first word of name (Mr.Robot enterprise -> Mr.Robot)
+	std::string shortenName(std::string name)
+	{
+		std::string out;
+		for (int i = 0; i < name.length(); i++)
+		{
+			char c = name[i];
+			if (c == ' ' || c == 0)
+			{
+				break;
+			}
+			out += c;
+		}
+		return out;
+	}
 
 	bool contains(std::vector<Planet*>* planets, Planet* planet)
 	{
@@ -425,6 +615,10 @@ public:
 				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "No Atmosphere");
 			}
 
+			ImGui::Text("Food Multiplier: %f", focused->foodBoost);
+			ImGui::Text("Mineral Multiplier: %f", focused->mineralBoost);
+			ImGui::Text("Science Multiplier: %f", focused->scienceBoost);
+
 			ImGui::InputText("Civ Name", nameBuff, 256);
 
 			if (ImGui::Button("Choose"))
@@ -472,6 +666,146 @@ public:
 			}
 
 			ImGui::Separator();
+		}
+
+		ImGui::End();
+	}
+
+	void drawRelationsWindow()
+	{
+		ImGui::Begin("Relations");
+		for (int i = 0; i < linked->otherEmpires.size(); i++)
+		{
+			ImGui::Text("%s:", linked->otherEmpires[i]->name.c_str());
+			ImGui::SameLine();
+			if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::HATRED)
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "AT WAR");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::ENEMIES)
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "AT WAR");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::COMPETENCE)
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.5, 0, 1.0), "COMPETENCE");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::NEUTRAL)
+			{
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1.0), "NEUTRAL");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::GOOD)
+			{
+				ImGui::TextColored(ImVec4(0.5, 1.0, 0.0, 1.0), "GOOD");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::FRIENDS)
+			{
+				ImGui::TextColored(ImVec4(0.3, 1.0, 0.3, 1.0), "FRIENDS");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::ALLIANCE)
+			{
+				ImGui::TextColored(ImVec4(0.1, 1.0, 0.1, 1.0), "ALLIANCE");
+			}
+		}
+		ImGui::End();
+	}
+
+	void drawPeopleWindow()
+	{
+		ImGui::Begin("Population");
+
+		ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Population:");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i", linked->population);
+
+		ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Soldiers: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i", linked->soldiers);
+
+		ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Employment: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%% (%i/%i)", 
+			(int)(((float)linked->workers / (float)linked->population) * 100.f),
+			linked->workers, linked->population);
+		
+		ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Workers/Workplaces: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i/%i", linked->workers, linked->workplaces);
+
+		ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Housing: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%%", 
+			(int)( ( (float)linked->housed / (float)linked->population) * 100.f));
+
+
+		ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Houses Used: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%% (%i/%i)",
+			(int)(((float)linked->housed / (float)linked->total_houses) * 100.f),
+			linked->housed, linked->total_houses);
+
+
+		if (ImGui::Button("Close"))
+		{
+			popWindow = false;
+		}
+
+		ImGui::End();
+	}
+
+
+	void drawEconomyWindow()
+	{
+		ImGui::Begin("Economy");
+
+		ImGui::SliderFloat("Taxes", &linked->taxes, 0.0f, 5.0f);
+
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Population x Taxes:");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i/d", (int)((float)linked->population * linked->taxes));
+
+		ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1.0), "Taxes will change when next month starts");
+
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Happiness Effect:");
+		ImGui::SameLine();
+		if (linked->taxes == 0)
+		{
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "25");
+		}
+		else
+		{
+			// We use -1.5(x-2)^3 as our happiness formula
+			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i",
+				(int)(powf(-1.5f*(linked->taxes-2.0f), 3.0f)));
+		}
+
+		ImGui::Separator();
+
+		ImGui::PlotLines("Cash", (float*)linked->previousMoney.data(), linked->previousMoney.size(), 
+			0, "", (3.402823466e+38f), (3.402823466e+38f), ImVec2(160, 50));
+		ImGui::PlotLines("Food", (float*)linked->previousFood.data(), linked->previousFood.size(),
+			0, "", (3.402823466e+38f), (3.402823466e+38f), ImVec2(160, 50));
+		ImGui::PlotLines("Metal", (float*)linked->previousMetal.data(), linked->previousMetal.size(),
+			0, "", (3.402823466e+38f), (3.402823466e+38f), ImVec2(160, 50));
+		ImGui::PlotLines("Tech", (float*)linked->previousTech.data(), linked->previousTech.size(),
+			0, "", (3.402823466e+38f), (3.402823466e+38f), ImVec2(160, 50));
+		if (ImGui::Button("Clear Graphs"))
+		{
+			linked->previousMoney.clear();
+			linked->previousFood.clear();
+			linked->previousMetal.clear();
+			linked->previousTech.clear();
+			linked->previousMoney.push_back(linked->money);
+			linked->previousFood.push_back(linked->food);
+			linked->previousMetal.push_back(linked->metal);
+			linked->previousTech.push_back(linked->tech);
+		}
+	
+		ImGui::SameLine();
+
+		if (ImGui::Button("Close"))
+		{
+			ecoWindow = false;
 		}
 
 		ImGui::End();
@@ -529,17 +863,33 @@ public:
 		ImGui::EndChild();
 		ImGui::SameLine();
 
-		ImGui::Button("Economy", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
+		if (ImGui::Button("Economy", ImVec2(empireWindow.height - 40, empireWindow.height - 40)))
+		{
+			ecoWindow = !ecoWindow;
+		}
 		ImGui::SameLine();
 		ImGui::BeginChild("EmpireSubEconomy", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
-		static float TestData[6] = { 0.f,-4.f,3.f,-2.f,0.f,4.f };
-		ImGui::PlotLines("Cash", TestData, 6);
-		ImGui::PlotLines("Food", TestData, 6);
-		ImGui::PlotLines("Metal", TestData, 6);
-		ImGui::PlotLines("Tech", TestData, 6);
+		ImGui::PlotLines("Cash", (float*)linked->previousMoney.data(), linked->previousMoney.size());
+		ImGui::PlotLines("Food", (float*)linked->previousFood.data(), linked->previousFood.size());
+		ImGui::PlotLines("Metal", (float*)linked->previousMetal.data(), linked->previousMetal.size());
+		ImGui::PlotLines("Tech", (float*)linked->previousTech.data(), linked->previousTech.size());
+		if (ImGui::Button("Clear Graphs"))
+		{
+			linked->previousMoney.clear();
+			linked->previousFood.clear();
+			linked->previousMetal.clear();
+			linked->previousTech.clear();
+			linked->previousMoney.push_back(linked->money);
+			linked->previousFood.push_back(linked->food);
+			linked->previousMetal.push_back(linked->metal);
+			linked->previousTech.push_back(linked->tech);
+		}
 		ImGui::EndChild();
 		ImGui::SameLine();
-		ImGui::Button("People", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
+		if (ImGui::Button("People", ImVec2(empireWindow.height - 40, empireWindow.height - 40)))
+		{
+			popWindow = !popWindow;
+		}
 		ImGui::SameLine();
 		ImGui::BeginChild("EmpireSubPopulation", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
 		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Population: ");
@@ -553,18 +903,45 @@ public:
 		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%%", (int)(((float)linked->workers / (float)linked->population) * 100.f));
 		ImGui::EndChild();
 		ImGui::SameLine();
-		ImGui::Button("Relations", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
+		if (ImGui::Button("Relations", ImVec2(empireWindow.height - 40, empireWindow.height - 40)))
+		{
+			retWindow = !retWindow;
+		}
 		ImGui::SameLine();
 		ImGui::BeginChild("EmpireSubRelations", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Mr.Robot: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "GOOD");
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Comcast: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "AT WAR");
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Google: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "NEUTRAL");
+		for (int i = 0; i < linked->otherEmpires.size(); i++)
+		{
+			ImGui::Text("%s:", shortenName(linked->otherEmpires[i]->name).c_str());
+			ImGui::SameLine();
+			if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::HATRED)
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "AT WAR");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::ENEMIES)
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "AT WAR");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::COMPETENCE)
+			{
+				ImGui::TextColored(ImVec4(1.0, 0.5, 0, 1.0), "COMPETENCE");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::NEUTRAL)
+			{
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1.0), "NEUTRAL");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::GOOD)
+			{
+				ImGui::TextColored(ImVec4(0.5, 1.0, 0.0, 1.0), "GOOD");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::FRIENDS)
+			{
+				ImGui::TextColored(ImVec4(0.3, 1.0, 0.3, 1.0), "FRIENDS");
+			}
+			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::ALLIANCE)
+			{
+				ImGui::TextColored(ImVec4(0.1, 1.0, 0.1, 1.0), "ALLIANCE");
+			}
+		}
 		ImGui::EndChild();
 
 		ImGui::End();
@@ -590,16 +967,21 @@ public:
 			{
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.4f, 0.2f, 1.0f));
 			}
+			else if (universe->planets[i]->owner == NULL)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25, 0.25f, 0.25f, 1.0f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.25f, 0.25f, 1.0f));
+			}
 			if (ImGui::Button(universe->planets[i]->name.c_str()))
 			{
 				focused = universe->planets[i];
 				state = PlayerState::VIEW_MODE;
 			}
 
-			if (isPlanetOurs)
-			{
-				ImGui::PopStyleColor(1);
-			}
+			ImGui::PopStyleColor(1);
 
 			if (i < universe->count - 1)
 			{
@@ -735,7 +1117,20 @@ public:
 		{
 			drawEmpireWindow();
 			drawSystemWindow();
+			if (ecoWindow)
+			{
+				drawEconomyWindow();
+			}
 
+			if (popWindow)
+			{
+				drawPeopleWindow();
+			}
+
+			if (retWindow)
+			{
+				drawRelationsWindow();
+			}
 
 		}
 		else if (state == PlayerState::EDIT_MODE)
@@ -750,6 +1145,11 @@ public:
 	}
 	
 	bool wasMousePressed = false;
+
+	void updateDaily()
+	{
+		linked->updateDaily();
+	}
 
 	void update(sf::View* v, float dt, sf::Vector2f mousePos, sf::RenderWindow* win)
 	{
@@ -971,11 +1371,11 @@ public:
 
 	EmpirePlayer* player;
 
-	std::vector<Empire> empires;
+	std::vector<Empire*> empires;
 
 	Universe* universe;
 
-	std::vector<EmpireAI> aiempires;
+	std::vector<EmpireAI*> aiempires;
 
 	void update(sf::View* v, float dt, sf::Vector2f mousepos, sf::RenderWindow* win)
 	{
@@ -983,7 +1383,7 @@ public:
 
 		for (int i = 0; i < aiempires.size(); i++)
 		{
-			aiempires[i].update(dt);
+			aiempires[i]->update(dt);
 		}
 	}
 
@@ -992,45 +1392,59 @@ public:
 		player->draw(win);
 	}
 
+	void updateDaily()
+	{
+		player->updateDaily();
+		for (int i = 0; i < aiempires.size(); i++)
+		{
+			aiempires[i]->updateDaily();
+		}
+	}
+
 	void createAIEmpire()
 	{
-		Empire n = Empire();
+		Empire* n = new Empire();
 		if (empires.size() != 0)
 		{
 			for (int i = 0; i < empires.size(); i++)
 			{
-				n.otherEmpires.push_back(&empires[i]);
+				n->otherEmpires.push_back(empires[i]);
 			}
 		}
-		EmpireAI nAi = EmpireAI();
+		EmpireAI* nAi = new EmpireAI();
 		empires.push_back(n);
-		nAi.linked = &empires[empires.size() - 1];
-		nAi.universe = universe;
+		nAi->linked = empires[empires.size() - 1];
+		nAi->universe = universe;
 		// Add us to every other empire
 		for (int i = 0; i < empires.size() - 1; i++)
 		{
-			empires[i].otherEmpires.push_back(&empires[empires.size() - 1]);
+			empires[i]->otherEmpires.push_back(empires[empires.size() - 1]);
+			nAi->relations[empires[i]] = Relation::NEUTRAL;
 		}
+
+		aiempires.push_back(nAi);
+
+		empires[empires.size() - 1]->aicontroller = aiempires[aiempires.size() - 1];
 	}
 
 	void createPlayerEmpire()
 	{
-		Empire n = Empire();
+		Empire* n = new Empire();
 		
 		if (empires.size() != 0)
 		{
 			// Add every other empire to our empire
 			for (int i = 0; i < empires.size(); i++)
 			{
-				n.otherEmpires.push_back(&empires[i]);
+				n->otherEmpires.push_back(empires[i]);
 			}
 		}
 		empires.push_back(n);
-		player->linked = &empires[empires.size() - 1];
+		player->linked = empires[empires.size() - 1];
 		// Add us to every other empire
 		for (int i = 0; i < empires.size() - 1; i++)
 		{
-			empires[i].otherEmpires.push_back(&empires[empires.size() - 1]);
+			empires[i]->otherEmpires.push_back(empires[empires.size() - 1]);
 		}
 	}
 

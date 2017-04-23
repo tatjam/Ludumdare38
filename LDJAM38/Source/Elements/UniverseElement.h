@@ -37,11 +37,11 @@ public:
 	{
 		"Kerbal Space Program",
 		"Mr.Robot Enterprise",
-		"Space Connectors",
-		"Tiny Planet Corps",
+		"Guamedo's Electric Company",
+		"TinyPlanet Corps",
 		"Jupiter Exploration",
 		"ComCast Communications",
-		"Space Explorer 9",
+		"Space-Explorer 9",
 		"Mann's Enterprise",
 		"Kepler's Vision",
 		"Xin-Yang Mining Corps",
@@ -199,6 +199,9 @@ public:
 				p->surfaceColor = GRASS_BASE_COLOR;
 				p->atmosphereColor = EARTHSKY_BASE_COLOR;
 				p->crustColor = ROCK_BASE_COLOR;
+
+				p->foodBoost += (float)(rand() % 50) / 70;
+				p->mineralBoost -= (float)(rand() % 50) / 70;
 			}
 			else
 			{
@@ -212,6 +215,10 @@ public:
 						usedNames.push_back(p->name);
 					}
 				}
+
+				p->foodBoost -= (float)(rand() % 50) / 70;
+				p->mineralBoost += (float)(rand() % 50) / 50;
+
 				// Non-earth like planet
 				p->hasAtmosphere = rand() < RAND_MAX / 8;
 				p->surfaceColor = DUST_BASE_COLOR;
