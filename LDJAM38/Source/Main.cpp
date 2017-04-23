@@ -5,6 +5,8 @@
 
 #include "Elements/PlanetElement.h"
 #include "Elements/UniverseElement.h"
+#include "Elements/EmpireElement.h"
+
 void resize(int width, int height, sf::Rect<float> &empireWindow, sf::Rect<float> &systemWindow)
 {
 	empireWindow = sf::Rect<float>(sf::Vector2f(0, (float)height -
@@ -112,6 +114,12 @@ int main()
 
 	float frameAverage = 0.0f;
 
+	Empire empire0 = Empire();
+
+	EmpirePlayer empirePlayer = EmpirePlayer(&universe);
+
+	empirePlayer.resize(startSize.x, startSize.y);
+
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -136,6 +144,7 @@ int main()
 				
 
 				resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
+				empirePlayer.resize((int)event.size.width, (int)event.size.height);
 				printf("Now scale %f\n", backdropScale);
 			}
 		}
@@ -144,46 +153,15 @@ int main()
 		dtt = dtClock.restart();
 		dt = dtt.asSeconds();
 
+
+		ImGui::SFML::Update(window, dtt);
+
 		frameAverage += dt;
 		frameAverage *= 0.5f;
 
-		if (focused != NULL)
-		{
-			renderView.setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
-		}
 		
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
-		{
-			if(focused == NULL)
-				renderView.move(sf::Vector2f(0, -1000.0f) * dt);
-			focused = NULL;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
-		{
-			if (focused == NULL)
-				renderView.move(sf::Vector2f(-1000.0, 0.0f) * dt);
-			focused = NULL;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
-		{
-			if (focused == NULL)
-				renderView.move(sf::Vector2f(0, 1000.0f) * dt);
-			focused = NULL;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
-		{
-			if (focused == NULL)
-				renderView.move(sf::Vector2f(1000.0f, 0.0f) * dt);
-			focused = NULL;
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
-		{
-			renderView.zoom(1.002f);
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::F))
-		{
-			renderView.zoom(0.998f);
-		}
+		empirePlayer.update(&renderView, dt);
+
 
 	/*	backdrop.setTextureRect(sf::IntRect(
 			renderView.getCenter().x - (renderView.getSize().x/2), 
@@ -226,203 +204,10 @@ int main()
 			}
 		}
 
-		ImGui::SFML::Update(window, dtt * timeSpeed);
 
-		ImGui::SetNextWindowPos(ImVec2(empireWindow.left, empireWindow.top), 
-			ImGuiSetCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(empireWindow.width, empireWindow.height), 
-			ImGuiSetCond_Always);
-		ImGui::Begin("Empire", NULL, 
-			ImGuiWindowFlags_NoTitleBar 
-			| ImGuiWindowFlags_NoResize
-			| ImGuiWindowFlags_NoMove);
-		ImGui::BeginChild("EmpireSubFocusData", ImVec2(empireWindow.width / 4, empireWindow.height - 40), true);
-		if (focused != NULL)
-		{
-			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Focused on ");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", focused->name.c_str());
-			ImGui::Separator();
-			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Owner: ");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "MR.Robot enterprise");
-			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Population: ");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "12312");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "| Tiles: ");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i/%i", 10, focused->size);
-		}
-		else
-		{
-			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Focused on no planet");
-		}
-		ImGui::EndChild();
-		ImGui::SameLine();
+		
 
-		ImGui::Button("Economy", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
-		ImGui::SameLine();
-		ImGui::BeginChild("EmpireSubEconomy", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
-		static float TestData[6] = { 0.f,-4.f,3.f,-2.f,0.f,4.f };
-		ImGui::PlotLines("Cash", TestData, 6);
-		ImGui::PlotLines("Food", TestData, 6);
-		ImGui::PlotLines("Metal", TestData, 6);
-		ImGui::PlotLines("Tech", TestData, 6);
-		ImGui::EndChild();
-		ImGui::SameLine();
-		ImGui::Button("People", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
-		ImGui::SameLine();
-		ImGui::BeginChild("EmpireSubPopulation", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
-		ImGui::EndChild();
-		ImGui::SameLine();
-		ImGui::Button("Relations", ImVec2(empireWindow.height - 40, empireWindow.height - 40));
-		ImGui::SameLine();
-		ImGui::BeginChild("EmpireSubRelations", ImVec2(empireWindow.height + 40, empireWindow.height - 40), true);
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Mr.Robot: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "GOOD");
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Comcast: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "AT WAR");
-		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Google: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "NEUTRAL");
-		ImGui::EndChild();
-
-		ImGui::End();
-
-		ImGui::SetNextWindowPos(ImVec2(systemWindow.left, systemWindow.top));
-		ImGui::SetNextWindowSize(ImVec2(systemWindow.width, systemWindow.height));
-		ImGui::Begin("System", NULL, ImGuiWindowFlags_NoTitleBar
-			| ImGuiWindowFlags_NoResize
-			| ImGuiWindowFlags_NoMove
-			| ImGuiWindowFlags_HorizontalScrollbar);
-
-		ImGui::BeginChild("SubSystemData", ImVec2(systemWindow.width * 0.7f, 50), 
-			true, ImGuiWindowFlags_HorizontalScrollbar);
-
-		for (int i = 0; i < universe.count; i++)
-		{
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.4f, 0.2f, 1.0f));
-				
-				if (ImGui::Button(universe.planets[i]->name.c_str()))
-				{
-					focused = universe.planets[i];
-				}
-
-				ImGui::PopStyleColor(1);
-			
-			if (i < universe.count - 1)
-			{
-				ImGui::SameLine();
-			}
-			else
-			{
-				
-			}
-		}
-		ImGui::EndChild();
-		ImGui::SameLine();
-		if (timeSpeed == 1)
-		{
-			if (ImGui::Button("[]"))
-			{
-				timeSpeed = 0;
-			}
-		}
-		else if (timeSpeed == 2)
-		{
-			if (ImGui::Button("|<"))
-			{
-				timeSpeed = 1;
-			}
-		}
-		else if (timeSpeed == 4)
-		{
-			if (ImGui::Button("<<"))
-			{
-				timeSpeed = 2;
-			}
-		}
-		else
-		{
-			if (ImGui::Button(">|"))
-			{
-				timeSpeed = 1;
-			}
-		}
-		ImGui::SameLine();
-		if (timeSpeed == 0)
-		{
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), "%02i:%02i:%04i", day, month, year);
-		}
-		else if (timeSpeed == 1)
-		{
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), "%02i:%02i:%04i", day, month, year);
-		}
-		else if (timeSpeed == 2)
-		{
-			ImGui::TextColored(ImVec4(1, 1, 1, 1), "%02i:%02i:%04i", day, month, year);
-		}
-		else
-		{
-			ImGui::TextColored(ImVec4(1.0f, 0.5, 0.1f, 1), "%02i:%02i:%04i", day, month, year);
-		}
-		ImGui::SameLine();
-		if (timeSpeed == 1)
-		{
-			if (ImGui::Button("> "))
-			{
-				timeSpeed = 2;
-			}
-		}
-		else if (timeSpeed == 2)
-		{
-			if (ImGui::Button(">>"))
-			{
-				timeSpeed = 4;
-			}
-		}
-		else if (timeSpeed == 4)
-		{
-			if (ImGui::Button("-|"))
-			{
-				timeSpeed = 4;
-			}
-		}
-		else
-		{
-			if (ImGui::Button("|<"))
-			{
-				timeSpeed = 1;
-			}
-		}
-		// Bottom Empire Stats
-		ImGui::Separator();
-		ImGui::TextColored(ImVec4(255, 255, 255, 1.0f), "Empire: ");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "123456");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(255, 255, 0, 1.0f), "C");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.8f, 0.7f, 0.1f, 1.0f), "F");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.9f, 1.0f), "T");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| 123456");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "M");
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i", (int)(1 / frameAverage));
-		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "FPS");
-		//	ImGui::Image(magic, sf::Vector2f(16, 16), sf::FloatRect(0, 0, 16, 16));
-		ImGui::End();
+		
 
 		mousePos -= p.worldPosition;
 		universe.update(dt * timeSpeed);

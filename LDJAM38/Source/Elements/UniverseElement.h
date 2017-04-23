@@ -4,9 +4,9 @@
 
 
 #define MIN_PLANETS 8
-#define MAX_PLANETS 16
-#define MAX_POS 5000
-#define MIN_DISTANCE_TO_STAR 615
+#define MAX_PLANETS 20
+#define MAX_POS 10000
+#define MIN_DISTANCE_TO_STAR 1000
 
 #define MAX_PLANET_SIZE 60
 #define MIN_PLANET_SIZE 12

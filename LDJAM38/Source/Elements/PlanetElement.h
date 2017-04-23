@@ -30,17 +30,6 @@
 
 class Planet;
 
-class Empire
-{
-	std::vector<Planet*> planets;
-	std::string name;
-	
-	float money;
-
-	float resources[5];
-
-	void render();
-};
 
 
 class Planet
