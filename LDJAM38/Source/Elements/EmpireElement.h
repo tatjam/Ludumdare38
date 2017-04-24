@@ -17,12 +17,12 @@ enum Relation
 	HATRED
 };
 
-#define STARTING_MONEY 5000
-#define STARTING_FOOD 10000
-#define STARTING_TECH 100
-#define STARTING_METAL 1000
+#define STARTING_MONEY 2500
+#define STARTING_FOOD 1000
+#define STARTING_TECH 50
+#define STARTING_METAL 50
 
-#define FOOD_PER_PERSON 2.0f
+#define FOOD_PER_PERSON 0.5f
 
 
 
@@ -31,6 +31,13 @@ enum EventSeverity
 	INFO,
 	WARN,
 	FATAL
+};
+
+enum Personality
+{
+	FRIENDLY,
+	NORMAL, 
+	HOSTILE
 };
 
 struct Event
@@ -193,6 +200,9 @@ public:
 		metaldaily = 0;
 
 
+		fooddaily -= (float)population * FOOD_PER_PERSON;
+
+		food -= (float)population * FOOD_PER_PERSON;
 
 		workplaces = 0;
 
@@ -206,82 +216,128 @@ public:
 			{
 				if (planets[i]->tiles[t] != 0)
 				{
-					switch (planets[i]->tiles[t])
+					if (planets[i]->tilesBuilding[t] >= 1.0f)
 					{
-					case BUILDING_HOUSE:
-						money -= HOUSE_MAINTENANCE;
-						moneydaily -= HOUSE_MAINTENANCE;
-						if (money >= HOUSE_MAINTENANCE)
+						switch (planets[i]->tiles[t])
 						{
-							if (housedPopulation + HOUSE_HOUSING > population)
+						case BUILDING_HOUSE:
+							money -= HOUSE_MAINTENANCE;
+							moneydaily -= HOUSE_MAINTENANCE;
+							if (money >= HOUSE_MAINTENANCE)
 							{
-								housedPopulation = population;
+								if (housedPopulation + HOUSE_HOUSING > population)
+								{
+									housedPopulation = population;
+								}
+								else
+								{
+									housedPopulation += HOUSE_HOUSING;
+								}
+
+								houses += HOUSE_HOUSING;
+							}
+							break;
+						case BUILDING_LABORATORY:
+
+							workplaces += LAB_EMPLOYMENT;
+							money -= LAB_MAINTENANCE;
+							moneydaily -= LAB_MAINTENANCE;
+							if (money >= LAB_MAINTENANCE && usedPopulation < population)
+							{
+								tech += LAB_GENERATION;
+								techdaily += LAB_GENERATION;
+
+							}
+							if (usedPopulation + LAB_EMPLOYMENT < population)
+							{
+								usedPopulation += LAB_EMPLOYMENT;
 							}
 							else
 							{
-								housedPopulation += HOUSE_HOUSING;
+								usedPopulation = population;
+							}
+							break;
+						case BUILDING_APPARTMENT:
+							money -= APP_MAINTENANCE;
+							moneydaily -= APP_MAINTENANCE;
+							if (money >= APP_MAINTENANCE) {
+								if (housedPopulation + APP_HOUSING > population)
+								{
+									housedPopulation = population;
+								}
+								else
+								{
+									housedPopulation += APP_HOUSING;
+								}
+
+								houses += APP_HOUSING;
+							}
+							break;
+						case BUILDING_FARM:
+							workplaces += FARM_EMPLOYMENT;
+							money -= FARM_MAINTENANCE;
+							moneydaily -= FARM_MAINTENANCE;
+
+							if (money >= FARM_MAINTENANCE && usedPopulation < population)
+							{
+								food += FARM_GENERATION;
+								fooddaily += FARM_GENERATION;
 							}
 
-							houses += HOUSE_HOUSING;
-						}
-						break;
-					case BUILDING_LABORATORY:
-						
-						workplaces += LAB_EMPLOYMENT;
-						money -= LAB_MAINTENANCE;
-						moneydaily -= LAB_MAINTENANCE;
-						if (money >= LAB_MAINTENANCE && usedPopulation < population)
-						{
-							tech += LAB_GENERATION;
-							techdaily += LAB_GENERATION;
-
-						}
-						if (usedPopulation + LAB_EMPLOYMENT < population)
-						{
-							usedPopulation += LAB_EMPLOYMENT;
-						}
-						else
-						{
-							usedPopulation = population;
-						}
-						break;
-					case BUILDING_APPARTMENT:
-						money -= APP_MAINTENANCE;
-						moneydaily -= APP_MAINTENANCE;
-						if (money >= APP_MAINTENANCE) {
-							if(housedPopulation + APP_HOUSING > population)
-							{ 
-								housedPopulation = population;
+							if (usedPopulation + FARM_EMPLOYMENT < population)
+							{
+								usedPopulation += FARM_EMPLOYMENT;
 							}
 							else
 							{
-								housedPopulation += APP_HOUSING;
+								usedPopulation = population;
 							}
 
-							houses += APP_HOUSING;
-						}
-						break;
-					case BUILDING_FARM:
-						workplaces += FARM_EMPLOYMENT;
-						money -= FARM_MAINTENANCE;
-						moneydaily -= FARM_MAINTENANCE;
+							break;
+						case BUILDING_MINE:
+							workplaces += MINE_EMPLOYMENT;
+							money -= MINE_MAINTENANCE;
+							moneydaily -= MINE_MAINTENANCE;
 
-						if (money >= FARM_MAINTENANCE && usedPopulation < population)
-						{
-							food += FARM_GENERATION;
+							if (money >= MINE_MAINTENANCE && usedPopulation < population)
+							{
+								metal += MINE_GENERATION;
+								metaldaily += MINE_GENERATION;
+							}
 
-						}
+							if (usedPopulation + MINE_EMPLOYMENT < population)
+							{
+								usedPopulation += MINE_EMPLOYMENT;
+							}
+							else
+							{
+								usedPopulation = population;
+							}
+							break;
+						case BUILDING_MARKET:
+							workplaces += MARKET_EMPLOYMENT;
 
-						if (usedPopulation + LAB_EMPLOYMENT < population)
-						{
-							usedPopulation += LAB_EMPLOYMENT;
-						}
-						else
-						{
-							usedPopulation = population;
-						}
+							if (usedPopulation < population)
+							{
+								money += MARKET_GENERATION;
+								moneydaily += MARKET_GENERATION;
+							}
 
-						break;
+							if (usedPopulation + MARKET_EMPLOYMENT < population)
+							{
+								usedPopulation += MARKET_EMPLOYMENT;
+							}
+							else
+							{
+								usedPopulation = population;
+							}
+							break;
+						}
+					}
+					else
+					{
+						float increase = 1 / (float)Planet::getBuildingTime(planets[i]->tiles[t]);
+						planets[i]->tilesBuilding[t] += increase;
 					}
 				}
 			}
@@ -343,12 +399,27 @@ public:
 
 };
 
+#define METAL_FOR_LAUNCH 2000
+#define TECH_FOR_LAUNCH 2000
+
+#define AI_SAFE_MARGIN 500
+
+enum AIFocus
+{
+	MAKE_MONEY,
+	MAKE_HAPPY,
+	MAKE_SOLDIERS,
+	EXPAND,
+};
+
 
 class EmpireAI
 {
 public:
 
+	Personality personality = Personality::NORMAL;
 
+	AIFocus focus = MAKE_HAPPY;
 
 	bool firstframe = true;
 
@@ -357,14 +428,244 @@ public:
 
 	Universe* universe;
 
+	int timeSinceUpdate = 99;
+
+	void aiBuild(int buildingType)
+	{
+		// Will find free space and build a building duh
+		// If the building extracts resource it will prioritize 
+		// planets with a boost of some kinds
+		if(linked->money - Planet::getBuildingPrice(buildingType) > AI_SAFE_MARGIN)
+		{
+			// Anywhere with free space!
+			for (int i = 0; i < linked->planets.size(); i++)
+			{
+				if (linked->planets[i] != NULL)
+				{
+					for (int t = 0; t < linked->planets[i]->size; t++)
+					{
+						if (linked->planets[i]->tiles[t] == 0)
+						{
+							// Build here
+							linked->planets[i]->tiles[t] = buildingType;
+							linked->planets[i]->tilesBuilding[t] = 0.0f;
+							linked->money -= Planet::getBuildingPrice(buildingType);
+							return;
+						}
+					}
+				}
+			}
+
+		}
+
+	}
+
 	void updateDaily()
 	{
 		linked->updateDaily();
+
+		printf("-----------------------\n");
+		printf("AI State:\n");
+		printf("-----------------------\n");
+		printf("Cash: %i (%i) | Metal: %i (%i) | \nFood: %i (%i) | Tech: %i (%i)\n", 
+			linked->money, linked->moneydaily, linked->metal, linked->metaldaily,
+			linked->food, linked->fooddaily, linked->tech, linked->techdaily);
+		printf("Happiness: %i | Population: %i\n", linked->happiness, linked->population);
+
+		// We only do shit every week cause reasons
+		if (timeSinceUpdate >= 7)
+		{
+			if (linked->moneydaily < 0)
+			{
+				focus = AIFocus::MAKE_MONEY;
+			}
+
+			if (linked->happiness < 0)
+			{
+				focus = AIFocus::MAKE_HAPPY;
+			}
+
+			if (linked->fooddaily < 0)
+			{
+				aiBuild(BUILDING_FARM);
+			}
+
+			if (focus == AIFocus::MAKE_HAPPY)
+			{
+				if (linked->happiness > 0)
+				{
+					if (linked->moneydaily > 0)
+					{
+						focus = AIFocus::EXPAND;
+					}
+					else
+					{
+						focus = AIFocus::MAKE_MONEY;
+					}
+				
+				}
+				// Find reason we are unhappy
+
+				if (linked->money < 0)
+				{
+					// We need to make money! Try to sell stuff to other empires
+					// and build markets. Also maybe make taxes bigger?
+					printf("AI making money (markets and trading)\n");
+
+					aiBuild(BUILDING_MARKET);
+				}
+				else if ((float)linked->housed / (float)linked->population < 0.8f)
+				{
+					// We need to build houses!
+					printf("AI building houses!\n");
+					aiBuild(BUILDING_HOUSE);
+				}
+				else if ((float)linked->workers / (float)linked->population < 0.8f)
+				{
+					// We need more places to work!
+					printf("AI is making workplaces!\n");
+
+					// Build stuff that generates whatever we lack
+					int lowestN = 0;
+					int lowest = INT_MAX;
+					if (linked->money < lowest)
+					{	
+						lowestN = 0;
+						lowest = linked->money;
+					}
+					if (linked->food < lowest)
+					{
+						lowestN = 1;
+						lowest = linked->food;
+					}
+					if (linked->tech < lowest)
+					{
+						lowestN = 2;
+						lowest = linked->tech;
+					}
+					if (linked->metal < lowest)
+					{
+						lowestN = 3;
+						lowest = linked->metal;
+					}
+
+					switch (lowestN)
+					{
+						case 0:
+							printf("Building money generator\n");
+							break;
+						case 1:
+							printf("Building farms\n");
+							aiBuild(BUILDING_FARM);
+							break;
+						case 2:
+							printf("Building lab\n");
+							aiBuild(BUILDING_LABORATORY);
+							break;
+						case 3:
+							printf("Building mine!\n");
+							break;
+					}
+
+				}
+				else
+				{
+					// ???
+					printf("AI is decreasing taxes!\n");
+					linked->wantedTaxes = linked->taxes - 0.1f;
+				}
+			}
+			else if (focus == AIFocus::MAKE_MONEY)
+			{
+				if (linked->happiness > 8)
+				{
+					// We can increase taxes a bit
+					printf("AI is increasing taxes!\n");
+					linked->wantedTaxes = linked->taxes + 0.2f;
+				}
+				else
+				{
+					printf("AI is building markets and trying to trade!\n");
+				}
+			}
+			else if (focus == AIFocus::MAKE_SOLDIERS)
+			{
+				printf("AI is building all kind of stuff but focusing on war stuff!\n");
+			}
+			else if (focus == AIFocus::EXPAND)
+			{
+				printf("AI is making resources to expand!\n");
+				if (linked->money > LAUNCHER_PRICE + AI_SAFE_MARGIN)
+				{
+					printf("AI will build launcher!\n");
+				}
+				else
+				{
+					printf("AI will only build all kind of resource builders!\n");
+					if (rand() > RAND_MAX / 2)
+					{
+						printf("AI building market\n");
+						aiBuild(BUILDING_MARKET);
+					}
+					else
+					{
+						printf("AI building lab!\n");
+						aiBuild(BUILDING_LABORATORY);
+					}
+				}
+			}
+			timeSinceUpdate = 0;
+		}
+
+		timeSinceUpdate++;
 	}
 
 	void updateMonthly()
 	{
 		linked->updateMonthly();
+
+		// Here we play the game for real
+		// Decisions are monthly
+
+		if (!firstframe)
+		{
+
+			if (linked->happiness > 10)
+			{
+				// If we are happy we can focus on other stuff
+				if (linked->money > 0)
+				{
+					if (linked->metal > METAL_FOR_LAUNCH && linked->tech > METAL_FOR_LAUNCH)
+					{
+						printf("AI is launching vessel!\n");
+						if (personality == Personality::HOSTILE || personality == Personality::NORMAL)
+						{
+							focus = MAKE_SOLDIERS;
+						}
+						else
+						{
+							focus = MAKE_MONEY;
+						}
+					}
+					printf("AI focusing on making tech and metal to expand\n");
+					focus = EXPAND;
+				}
+				else
+				{
+					printf("AI focusing in making money!\n");
+					focus = MAKE_MONEY;
+				}
+			}
+			else
+			{
+				// If we are not building economy we will try to make our country happy
+				if (focus != MAKE_MONEY)
+				{
+					focus = MAKE_HAPPY;
+				}
+			}
+
+		}
 	}
 
 	void update(float dt)
@@ -409,6 +710,8 @@ public:
 		else
 		{
 			// Play the game :3
+
+			// We play daily so nothing here duh
 
 		}
 
@@ -608,6 +911,23 @@ public:
 				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", LAUNCHER_PRICE);
 				ImGui::TextWrapped("Allows you to launch a vehicle twice every year. 15000C every launch and %iC maintenance",
 					LAUNCHER_MAINTENANCE);
+				ImGui::EndChild();
+			}
+			else if (i == BUILDING_MARKET)
+			{
+				if (ImGui::ImageButton(focused->buildings["market"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["market"];
+					choosenTileName = "Market";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("MARKETSSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", MARKET_PRICE);
+				ImGui::TextWrapped("Generates %iC on a daily basis. Requires %i employees", 
+					MARKET_GENERATION, MARKET_EMPLOYMENT);
 				ImGui::EndChild();
 			}
 
@@ -1015,6 +1335,9 @@ public:
 		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Workers: ");
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%%", (int)(((float)linked->workers / (float)linked->population) * 100.f));
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Housed: ");
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "%i%%", (int)(((float)linked->housed / (float)linked->population) * 100.f));
 		ImGui::EndChild();
 		ImGui::SameLine();
 		if (ImGui::Button("Relations", ImVec2(empireWindow.height - 40, empireWindow.height - 40)))
@@ -1281,6 +1604,7 @@ public:
 		else if (state == PlayerState::EDIT_MODE)
 		{
 			drawSystemWindow();
+			drawEmpireWindow();
 			drawEditorUI();
 		}
 		else if (state == PlayerState::CHOOSE_WORLD)
@@ -1455,8 +1779,13 @@ public:
 					{
 						if (focused->tiles[tileC] == 0)
 						{
-							focused->tiles[tileC] = choosenTileType;
-							focused->usedtiles++;
+							if (linked->money - Planet::getBuildingPrice(choosenTileType) > 0)
+							{
+								focused->tiles[tileC] = choosenTileType;
+								focused->usedtiles++;
+								linked->money -= Planet::getBuildingPrice(choosenTileType);
+								focused->tilesBuilding[tileC] = 0.0f;
+							}
 						}
 						// BUY THE TILE
 					}
@@ -1601,6 +1930,23 @@ public:
 			}
 		}
 		EmpireAI* nAi = new EmpireAI();
+		
+		if (rand() > RAND_MAX / 2)
+		{
+			if (rand() > RAND_MAX / 2)
+			{
+				nAi->personality = Personality::HOSTILE;
+			}
+			else
+			{
+				nAi->personality = Personality::FRIENDLY;
+			}
+		}
+		else
+		{
+			nAi->personality = Personality::NORMAL;
+		}
+
 		empires.push_back(n);
 		nAi->linked = empires[empires.size() - 1];
 		nAi->universe = universe;

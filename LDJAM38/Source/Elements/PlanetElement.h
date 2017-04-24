@@ -21,40 +21,51 @@
 #define BUILDING_FARM 4
 #define BUILDING_LAUNCHER 5
 #define BUILDING_MINE 6
-#define BUILDING_WARPLACE 7
+#define BUILDING_MARKET 7
 #define BUILDING_MAGICPLACE 8
 
-#define BUILDING_TYPES 7
+#define BUILDING_TYPES 8
 
 
 // HOUSE
 #define HOUSE_PRICE 100
 #define HOUSE_MAINTENANCE 0
 #define HOUSE_HOUSING 5
+#define HOUSE_BUILD_TIME 3
 // LABORATORY
-#define LAB_PRICE 1000
-#define LAB_MAINTENANCE 5
+#define LAB_PRICE 500
+#define LAB_MAINTENANCE 10
 #define LAB_GENERATION 2
 #define LAB_EMPLOYMENT 10
+#define LAB_BUILD_TIME 7
 // APPARTMENT
-#define APP_PRICE 1000
+#define APP_PRICE 500
 #define APP_MAINTENANCE 2
 #define APP_HOUSING 25
+#define APP_BUILD_TIME 10
 // FARM
 #define FARM_PRICE 250
 #define FARM_MAINTENANCE 5
 #define FARM_GENERATION 10
-#define FARM_EMPLOYMENT 10
+#define FARM_EMPLOYMENT 5
+#define FARM_BUILD_TIME 5
 // LAUNCHER
-#define LAUNCHER_PRICE 25000
+#define LAUNCHER_PRICE 2000
 #define LAUNCHER_MAINTENANCE 50
 #define LAUNCHER_EMPLOYMENT 30
+#define LAUNCHER_BUILD_TIME 200
 // MINE
-#define MINE_PRICE 2000
+#define MINE_PRICE 500
 #define MINE_MAINTENANCE 20
 #define MINE_GENERATION 15
 #define MINE_EMPLOYMENT 20
-
+#define MINE_BUILD_TIME 20
+// MARKET
+#define MARKET_PRICE  1000
+#define MARKET_MAINTENANCE 0
+#define MARKET_GENERATION 20
+#define MARKET_EMPLOYMENT 5
+#define MARKET_BUILD_TIME 10
 
 #define SECTOR_SIZE 32.0f
 
@@ -80,6 +91,52 @@ private:
 	
 
 public:
+
+	static int getBuildingPrice(int type)
+	{
+		switch(type)
+		{
+		case BUILDING_HOUSE:
+			return HOUSE_PRICE;
+		case BUILDING_APPARTMENT:
+			return APP_PRICE;
+		case BUILDING_FARM:
+			return FARM_PRICE;
+		case BUILDING_LABORATORY:
+			return LAB_PRICE;
+		case BUILDING_MARKET:
+			return MARKET_PRICE;
+		case BUILDING_MINE:
+			return MINE_PRICE;
+		case BUILDING_LAUNCHER:
+			return LAUNCHER_PRICE;
+		}
+
+		return 0;
+	}
+
+	static int getBuildingTime(int type)
+	{
+		switch (type)
+		{
+		case BUILDING_HOUSE:
+			return HOUSE_BUILD_TIME;
+		case BUILDING_APPARTMENT:
+			return APP_BUILD_TIME;
+		case BUILDING_FARM:
+			return FARM_BUILD_TIME;
+		case BUILDING_LABORATORY:
+			return LAB_BUILD_TIME;
+		case BUILDING_MARKET:
+			return MARKET_BUILD_TIME;
+		case BUILDING_MINE:
+			return MINE_BUILD_TIME;
+		case BUILDING_LAUNCHER:
+			return LAUNCHER_BUILD_TIME;
+		}
+
+		return 0;
+	}
 
 	std::map<std::string, sf::Texture> buildings;
 
@@ -118,6 +175,9 @@ public:
 	Empire* owner;
 
 	std::vector<int> tiles;
+
+	// From 0 to 1.0f. Calculated in Empire
+	std::vector<float> tilesBuilding;
 
 	void makeDrawables();
 	void draw(sf::RenderWindow* win, sf::Vector2f sunloc);

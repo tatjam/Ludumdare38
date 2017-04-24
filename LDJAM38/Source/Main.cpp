@@ -38,6 +38,7 @@ int main()
 	sf::Texture magic = sf::Texture();
 	sf::Texture launcher = sf::Texture();
 	sf::Texture mine = sf::Texture();
+	sf::Texture market = sf::Texture();
 
 	cross.loadFromFile("Resource/cross.png");
 	gear.loadFromFile("Resource/gear.png");
@@ -54,6 +55,7 @@ int main()
 	lab.loadFromFile("Resource/building/lab.png");
 	mine.loadFromFile("Resource/building/mine.png");
 	launcher.loadFromFile("Resource/building/launcher.png");
+	market.loadFromFile("Resource/building/market.png");
 	space.setRepeated(true);
 
 	buildings["apps"] = appartment;
@@ -62,6 +64,7 @@ int main()
 	buildings["lab"] = lab;
 	buildings["mine"] = mine;
 	buildings["launcher"] = launcher;
+	buildings["market"] = market;
 
 	sf::Rect<float> empireWindow;
 	sf::Rect<float> systemWindow;
@@ -132,8 +135,8 @@ int main()
 	manager.createPlayerEmpire();
 
 	manager.createAIEmpire();
-	manager.createAIEmpire();
-	manager.createAIEmpire();
+	/*manager.createAIEmpire();
+	manager.createAIEmpire();*/
 
 	empirePlayer.resize(startSize.x, startSize.y);
 

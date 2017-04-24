@@ -23,6 +23,7 @@ Planet::Planet(int size, sf::Texture shade, sf::Texture rock, sf::Texture night,
 	this->atmo = atmo;
 
 	this->tiles = std::vector<int>(size, 0);
+	this->tilesBuilding = std::vector<float>(size, 0.0f);
 }
 
 void Planet::update(float dt, bool rotate)
@@ -200,9 +201,24 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 				b = sf::Sprite(buildings["mine"]);
 			if (btype == BUILDING_LAUNCHER)
 				b = sf::Sprite(buildings["launcher"]);
+			if (btype == BUILDING_MARKET)
+				b = sf::Sprite(buildings["market"]);
 			b.setOrigin(16, 64);
 			b.setPosition(getSectorPosition(i) + worldPosition);
 			b.setRotation(getSectorAngle(i));
+			int alpha = tilesBuilding[i] * 255;
+			if (alpha > 255)
+			{
+				alpha = 255;
+			}
+			if (alpha < 255)
+			{
+				b.setColor(sf::Color(255, 64, 64, alpha));
+			}
+			else
+			{
+				b.setColor(sf::Color(255, 255, 255, alpha));
+			}
 			win->draw(b);
 		}
 	}
