@@ -103,7 +103,7 @@ public:
 	int workers = 0;
 	int housed = 0;
 	int population = 10;
-	int soldiers = 1000;
+	int soldiers = 0;
 
 
 	int launcherCount = 0;
@@ -137,14 +137,131 @@ public:
 		previousTech.push_back(STARTING_TECH);
 	}
 
-	void attack(Planet* target, int sold)
+	void destroyBuildings(Planet* target, int count)
+	{
+		int destroyed = 0;
+		bool done = false;
+		if (target->usedtiles < count)
+		{
+			count = target->usedtiles;
+		}
+		printf("Deleting %i tiles\n", count);
+
+		while(!done)
+		{
+			printf("DELETING TILE?");
+			int pos = rand() % target->size;
+			if (target->tiles[pos] != 0)
+			{
+				target->tiles[pos] = 0;
+				target->tilesBuilding[pos] = 0;
+				destroyed++;
+				printf("OK!\n");
+			}
+			else
+			{
+				printf("NAY!\n");
+			}
+			if (destroyed >= count)
+			{
+				done = true;
+			}
+		}
+	}
+
+	void attack(Planet* target, int sold, bool annex)
 	{
 		if (target->owner != NULL && target->owner != this)
 		{
-			int ourPower = (int)((float)sold * ((float)(rand() % 10) / 10.0f));
-			int theirPower = (int)((float)target->owner->soldiers * ((float)(rand() % 10) / 10.0f));
+			float ourPower = (float)sold;
+			float theirPower = (float)target->owner->soldiers;
 
-			printf("OurPower: %i, TheirPower: %i\n", ourPower, theirPower);
+			float ourLuck = ((float)(rand() % 100) / 100.0f) + 0.7f;
+			float theirLuck = ((float)(rand() % 100) / 100.0f) + 0.7f;
+
+
+			ourPower *= ourLuck;
+			theirPower *= theirLuck;
+
+
+			if (ourPower > 70)
+			{
+
+
+				if (ourPower > theirPower)
+				{
+
+
+					if (annex)
+					{
+						// We can take over the planet!
+						// Also some stuff will be damaged and a portion 
+						// of their population will move to our civilization
+						int buildingsToDestroy = (theirPower / ourPower) * 10;
+
+						std::string message = "Our forces sucessfully annexed planet ";
+						message.append(target->name.c_str());
+						message.append(". Buildings destroyed: ");
+						message.append(std::to_string((int)((ourPower / theirPower) * 10)));
+						events.push_back(Event(EventSeverity::FATAL, message));
+
+						target->owner->planets.erase(
+							std::remove(target->owner->planets.begin(),
+								target->owner->planets.end(),
+								target), target->owner->planets.end());
+
+						target->owner = this;
+						population += target->owner->population / 6;
+						target->owner->population -= target->owner->population / 6;
+						planets.push_back(target);
+
+						int toDestroy = (int)((ourPower / theirPower) * 10);
+
+						destroyBuildings(target, toDestroy);
+					}
+					else
+					{
+						// We will do a lot of damage but not
+						// destroy it completely
+						int buildingsToDestroy = (theirPower / ourPower) * 30;
+						std::string message = "Our forces sucessfully damaged planet ";
+						message.append(target->name.c_str());
+						message.append(". Buildings destroyed: ");
+						message.append(std::to_string((int)((ourPower / theirPower) * 30)));
+						events.push_back(Event(EventSeverity::FATAL, message));
+
+						int toDestroy = (int)((ourPower / theirPower) * 30);
+
+						destroyBuildings(target, toDestroy);
+					}
+				}
+				else
+				{
+					std::string message = "We could not win the defensive forces at ";
+					message.append(target->name.c_str());
+					message.append(". Buildings destroyed: ");
+					message.append(std::to_string((int)((ourPower / theirPower) * 10)));
+					events.push_back(Event(EventSeverity::FATAL, message));
+					// We will do a bit of damage to buildings
+					int buildingsToDestroy = (ourPower / theirPower) * 10;
+
+					int toDestroy = (int)((ourPower / theirPower) * 10);
+
+					destroyBuildings(target, toDestroy);
+				}
+			}
+			else
+			{
+				events.push_back(Event(EventSeverity::FATAL, "We couldn't do any damage to land, but managed to get a few soldiers"));
+			}
+
+			soldiers -= sold;
+
+			target->owner->soldiers -= (int)ourPower;
+			if (target->owner->soldiers < 0)
+			{
+				target->owner->soldiers = 0;
+			}
 
 			/*if (ourPower > theirPower)
 			{
@@ -652,6 +769,7 @@ public:
 								linked->planets[i]->tiles[t] = BUILDING_LAUNCHER;
 								linked->planets[i]->tilesBuilding[t] = 0;
 								linked->money -= Planet::getBuildingPrice(BUILDING_LAUNCHER);
+								//linked->planets[i]->usedtiles++; // TILES STAY THE SAME
 								return true;
 							}
 						}
@@ -672,6 +790,7 @@ public:
 							linked->planets[i]->tiles[t] = buildingType;
 							linked->planets[i]->tilesBuilding[t] = 0.0f;
 							linked->money -= Planet::getBuildingPrice(buildingType);
+							linked->planets[i]->usedtiles++;
 							return true;
 						}
 					}
@@ -706,14 +825,14 @@ public:
 
 		linked->updateDaily();
 
-		printf("-----------------------\n");
+		/*printf("-----------------------\n");
 		printf("AI State:\n");
 		printf("-----------------------\n");
 		printf("Cash: %i (%i) | Metal: %i (%i) | \nFood: %i (%i) | Tech: %i (%i)\n", 
 			linked->money, linked->moneydaily, linked->metal, linked->metaldaily,
 			linked->food, linked->fooddaily, linked->tech, linked->techdaily);
 		printf("Happiness: %i | Population: %i\n", linked->happiness, linked->population);
-		printf("AIFocus: %i\n", focus);
+		printf("AIFocus: %i\n", focus);*/
 
 		// We only do shit every week cause reasons
 		if (timeSinceUpdate >= 7)
@@ -730,7 +849,7 @@ public:
 
 			if (linked->fooddaily < 0)
 			{
-				printf("AI building farm!");
+				//printf("AI building farm!");
 				if (!aiBuild(BUILDING_HFARM))
 				{
 					aiBuild(BUILDING_FARM);
@@ -740,7 +859,7 @@ public:
 			if (linked->moneydaily > 4 && linked->metaldaily > 4 && linked->techdaily > 4 && linked->fooddaily > 4
 				&& linked->timeSinceLastLauncher >= 240)
 			{
-				printf("AI has stable economy, proceding to build launcher");
+				//printf("AI has stable economy, proceding to build launcher");
 				focus = AIFocus::EXPAND;
 			}
 
@@ -764,7 +883,7 @@ public:
 				{
 					// We need to make money! Try to sell stuff to other empires
 					// and build markets. Also maybe make taxes bigger?
-					printf("AI making money (markets and trading)\n");
+					//printf("AI making money (markets and trading)\n");
 
 					if (aiBuild(BUILDING_MARKET) == false)
 					{
@@ -774,7 +893,7 @@ public:
 				else if ((float)linked->housed / (float)linked->population < 0.8f)
 				{
 					// We need to build houses!
-					printf("AI building houses!\n");
+					//printf("AI building houses!\n");
 					if (!aiBuild(BUILDING_APPARTMENT))
 					{
 						aiBuild(BUILDING_HOUSE);
@@ -783,7 +902,7 @@ public:
 				else if ((float)linked->workers / (float)linked->population < 0.8f)
 				{
 					// We need more places to work!
-					printf("AI is making workplaces!\n");
+					//printf("AI is making workplaces!\n");
 
 					// Build stuff that generates whatever we lack
 					int lowestN = 0;
@@ -817,28 +936,28 @@ public:
 					switch (lowestN)
 					{
 						case 0:
-							printf("Building money generator\n");
+							//printf("Building money generator\n");
 							if (!aiBuild(BUILDING_MARKET))
 							{
 								aiBuild(BUILDING_SMARKET);
 							}
 							break;
 						case 1:
-							printf("Building farms\n");
+							//printf("Building farms\n");
 							if (!aiBuild(BUILDING_HFARM))
 							{
 								aiBuild(BUILDING_FARM);
 							}
 							break;
 						case 2:
-							printf("Building lab\n");
+							//printf("Building lab\n");
 							if (!aiBuild(BUILDING_LABORATORY))
 							{
 								aiBuild(BUILDING_SMARKET);
 							}
 							break;
 						case 3:
-							printf("Building mine!\n");
+							//printf("Building mine!\n");
 							aiBuild(BUILDING_MINE);
 							break;
 					}
@@ -847,7 +966,7 @@ public:
 				else
 				{
 					// ???
-					printf("AI is decreasing taxes!\n");
+					//printf("AI is decreasing taxes!\n");
 					linked->wantedTaxes = linked->wantedTaxes - 0.4f;
 				}
 			}
@@ -856,13 +975,13 @@ public:
 				if (linked->happiness > 8)
 				{
 					// We can increase taxes a bit
-					printf("AI is increasing taxes!\n");
+					//printf("AI is increasing taxes!\n");
 					linked->wantedTaxes = linked->wantedTaxes + 0.4f;
 					timeSinceUpdate = 5;
 				}
 				else
 				{
-					printf("AI is building markets and trying to trade!\n");
+					//printf("AI is building markets and trying to trade!\n");
 					if (!aiBuild(BUILDING_MARKET))
 					{
 						if (!aiBuild(BUILDING_SMARKET))
@@ -874,7 +993,7 @@ public:
 			}
 			else if (focus == AIFocus::MAKE_SOLDIERS)
 			{
-				printf("AI is building all kind of stuff but focusing on war stuff!\n");
+				//printf("AI is building all kind of stuff but focusing on war stuff!\n");
 				if (linked->happiness < 20)
 				{
 					focus = AIFocus::MAKE_HAPPY;
@@ -884,14 +1003,14 @@ public:
 				{
 					// WAR STUFF
 					// Make some soldiers
-					printf("Making some soldiers!\n");
+					//printf("Making some soldiers!\n");
 				}
 				else
 				{
 					// Other stuff
 					if (rand() > RAND_MAX / 2)
 					{
-						printf("AI building market\n");
+						//printf("AI building market\n");
 						if (!aiBuild(BUILDING_MARKET))
 						{
 							aiBuild(BUILDING_SMARKET);
@@ -904,17 +1023,17 @@ public:
 					}
 					else
 					{
-						printf("AI building lab!\n");
+						//printf("AI building lab!\n");
 						aiBuild(BUILDING_LABORATORY);
 					}
 				}
 			}
 			else if (focus == AIFocus::EXPAND)
 			{
-				printf("AI waiting to build launcher!\n");
+				//printf("AI waiting to build launcher!\n");
 				if (linked->money > LAUNCHER_PRICE + AI_SAFE_MARGIN && linked->timeSinceLastLauncher >= 240)
 				{
-					printf("AI will build launcher!\n");
+					//printf("AI will build launcher!\n");
 					aiBuild(BUILDING_LAUNCHER);
 					linked->timeSinceLastLauncher = 0;
 				}
@@ -1155,14 +1274,14 @@ public:
 				ImGui::Text("About to attack: %s", attackTarget->name.c_str());
 				if (ImGui::Button("Do Attack! (Damage)"))
 				{
-					linked->attack(attackTarget, attackSoldierCount);
+					linked->attack(attackTarget, attackSoldierCount, false);
 				}
 
 				ImGui::SameLine();
 
 				if (ImGui::Button("Do Attack! (Annex)"))
 				{
-					linked->attack(attackTarget, attackSoldierCount);
+					linked->attack(attackTarget, attackSoldierCount, true);
 				}
 			}
 			else
@@ -1321,7 +1440,7 @@ public:
 	{
 		ImGui::Begin("Tiles");
 
-		for (int i = 1; i < BUILDING_TYPES; i++)
+		for (int i = 1; i < BUILDING_TYPES_TOTAL; i++)
 		{
 			/*if (i == choosenTileType)
 			{
