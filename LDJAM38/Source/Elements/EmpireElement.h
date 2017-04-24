@@ -802,6 +802,102 @@ public:
 	sf::Texture gear;
 	sf::Texture cross;
 
+	bool showGuide = true;
+
+	int guidePage = 0;
+
+
+	void drawGuide()
+	{
+		ImGui::SetNextWindowSize(ImVec2(290, 400));
+		ImGui::Begin("Guide", NULL, ImGuiWindowFlags_NoResize);
+
+		ImGui::Text("You can close/open this guide with F1");
+		ImGui::Spacing();
+		ImGui::Separator();
+
+		if (guidePage == 0)
+		{
+			ImGui::Text("Getting Started:");
+			ImGui::BeginChild("GuideContent", ImVec2(250, 300), true);
+			ImGui::TextWrapped("TinyPlanets is a RTS game set in a solar system made of tiny planets");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Your objective is to either annex every other corporation in the system or launch a vessel to another solar system");
+			ImGui::Spacing();
+			ImGui::TextWrapped("To do this you must build on planets, and expand into other ones using the tools provided");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Most windows can be moved around, including this guide. (<3 ImGui)");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Right now you should choose a planet and continue reading the guide (Use the buttons below!)");
+			ImGui::EndChild();
+		}
+		else if (guidePage == 1)
+		{
+			ImGui::Text("Basic Usage:");
+			ImGui::BeginChild("GuideContent", ImVec2(250, 300), true);
+			ImGui::TextWrapped("There are two views: World view and Edit view. Chances are you are in World view right now");
+			ImGui::Spacing();
+			ImGui::TextWrapped("At the top you can see the solar system panel, time control buttons and resource statistics");
+			ImGui::Spacing();
+			ImGui::TextWrapped("At the bottom you can see your empire's stats, and clicking on the buttons, show more information");
+			ImGui::Spacing();
+			ImGui::TextWrapped("You can select planets at the top, green ones are owned by you, gray ones have no owner and red ones are from another corporation");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Choose your home-planet (green) and click edit at the bottom left to get into edit mode. Please continue reading.");
+			ImGui::EndChild();
+		}
+		else if (guidePage == 2)
+		{
+			ImGui::Text("Edit Mode:");
+			ImGui::BeginChild("GuideContent", ImVec2(250, 300), true);
+			ImGui::TextWrapped("In Edit mode you can build and destroy buildings in your planet");
+			ImGui::Spacing();
+			ImGui::TextWrapped("You have two panels: Tiles and Choosen Tile");
+			ImGui::Spacing();
+			ImGui::TextWrapped("The first allows you to select which building you want to build");
+			ImGui::Spacing();
+			ImGui::TextWrapped("The second allows you to see what are the contents of the selected tile");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Left-Click to build, Right-click to lock mouse cursor. Escape to exit build mode");
+			ImGui::Spacing();
+			ImGui::TextWrapped("You can move around with WASD and zoom with R/F");
+			ImGui::EndChild();
+		}
+		else if (guidePage == 3)
+		{
+			ImGui::Text("Strategy:");
+			ImGui::BeginChild("GuideContent", ImVec2(250, 300), true);
+			ImGui::TextWrapped("You should make sure you always have enough of every resource, and that your population is happy");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Your money can be keep up by the increase of taxes or the building of markets");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Minerals can be optained by building mines");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Food is generated in farms and Algae Domes");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Technology is generated in laboratories");
+			ImGui::Spacing();
+			ImGui::TextWrapped("In order to expand into another planet you need a decent ammount of every resource.");
+			ImGui::Spacing();
+			ImGui::TextWrapped("You should also build a millitary. It will require a fair ammount of metal, food and population.");
+			ImGui::EndChild();
+		}
+		if (ImGui::Button("<"))
+		{
+			if (guidePage > 0)
+			{
+				guidePage--;
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(">"))
+		{
+			guidePage++;
+		}
+
+		ImGui::End();
+	}
+
 	void drawEditorUI()
 	{
 		ImGui::Begin("Tiles");
@@ -974,10 +1070,14 @@ public:
 			ImGui::Image(focused->buildings["house"]);
 			ImGui::Text("House");
 			break;
+		case BUILDING_MARKET:
+			ImGui::Image(focused->buildings["market"]);
+			ImGui::Text("Market");
 		}
 
 		if (focused->tiles[tileC] != 0)
 		{
+			ImGui::Text("Build Progress: %i%%", (int)(focused->tilesBuilding[tileC] * 100.0f));
 			if (ImGui::Button("Destroy"))
 			{
 				focused->tiles[tileC] = 0;
@@ -1574,6 +1674,8 @@ public:
 	bool allowMove = true;
 	bool wasRightDown = false;
 	
+	bool wasGuideButtonDown = false;
+
 	void drawUI(PlayerState state)
 	{
 		if (state == PlayerState::VIEW_MODE)
@@ -1610,6 +1712,24 @@ public:
 		else if (state == PlayerState::CHOOSE_WORLD)
 		{
 			drawWorldChooserWindow();
+		}
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::F1))
+		{
+			if (wasGuideButtonDown == false)
+			{
+				showGuide = !showGuide;
+				wasGuideButtonDown = true;
+			}
+		}
+		else
+		{
+			wasGuideButtonDown = false;
+		}
+
+		if (showGuide)
+		{
+			drawGuide();
 		}
 	}
 	
@@ -1888,9 +2008,12 @@ public:
 	{
 		player->update(v, dt, mousepos, win);
 
-		for (int i = 0; i < aiempires.size(); i++)
+		if (player->state != PlayerState::CHOOSE_WORLD)
 		{
-			aiempires[i]->update(dt);
+			for (int i = 0; i < aiempires.size(); i++)
+			{
+				aiempires[i]->update(dt);
+			}
 		}
 	}
 
