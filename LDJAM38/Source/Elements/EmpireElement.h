@@ -103,7 +103,7 @@ public:
 	int workers = 0;
 	int housed = 0;
 	int population = 10;
-	int soldiers = 0;
+	int soldiers = 5;
 
 
 	int launcherCount = 0;
@@ -135,6 +135,14 @@ public:
 		previousFood.push_back(STARTING_FOOD);
 		previousMetal.push_back(STARTING_METAL);
 		previousTech.push_back(STARTING_TECH);
+	}
+
+	void receiveAttack(Empire* attacker)
+	{
+		std::string message = "You have been attacked by: ";
+		message.append(attacker->name.c_str());
+		message.append(". War has been declared");
+		events.push_back(Event(EventSeverity::FATAL, message));
 	}
 
 	void destroyBuildings(Planet* target, int count)
@@ -173,6 +181,8 @@ public:
 	{
 		if (target->owner != NULL && target->owner != this)
 		{
+
+
 			float ourPower = (float)sold;
 			float theirPower = (float)target->owner->soldiers;
 
@@ -184,7 +194,7 @@ public:
 			theirPower *= theirLuck;
 
 
-			if (ourPower > 70)
+			if (ourPower > 30)
 			{
 
 
@@ -403,14 +413,6 @@ public:
 		{
 			events.erase(events.begin());
 		}*/
-
-		timeSinceAttack++;
-		if (timeSinceAttack > 5)
-		{
-			// Think if we want to attack anything and do so
-			
-			timeSinceAttack = 0;
-		}
 
 		happiness = 0;
 
@@ -732,6 +734,31 @@ public:
 
 	int timeSinceUpdate = 99;
 
+	void receiveAttack(Empire* attacker)
+	{
+		if (relations[attacker] == Relation::ENEMIES)
+		{
+			relations[attacker] = Relation::HATRED;
+		}
+		else if (relations[attacker] == Relation::ALLIANCE)
+		{
+			if (personality == Personality::FRIENDLY)
+			{
+				relations[attacker] = Relation::COMPETENCE;
+			}
+			else
+			{
+				// Traitors!!
+				relations[attacker] = Relation::HATRED;
+			}
+		}
+		else
+		{
+			relations[attacker] = Relation::ENEMIES;
+		}
+
+	}
+
 	bool aiBuild(int buildingType)
 	{
 		// Will find free space and build a building duh
@@ -803,6 +830,8 @@ public:
 
 	}
 
+	bool peaceful = false;
+
 	void aiLaunch()
 	{
 		for (int i = 0; i < universe->planets.size(); i++)
@@ -814,16 +843,125 @@ public:
 		}
 	}
 
+	void aiAttack(Empire* e)
+	{
+		if (peaceful == false)
+		{
+			if (linked->soldiers < 35)
+			{
+				if (personality == Personality::HOSTILE || personality == Personality::NORMAL)
+				{
+					focus = AIFocus::MAKE_SOLDIERS;
+				}
+			}
+			else
+			{
+				int estimated = e->soldiers;
+				estimated += (rand() % e->soldiers / 2) - e->soldiers / 2;
+				printf("estimated %i\n", estimated);
+				// Attack random planet of empire
+				int n = rand() % e->planets.size();
+				linked->attack(e->planets[n], estimated + 100, rand() % 2);
+				relations[e] = Relation::ENEMIES;
+			}
+		}
+		else
+		{
+			// We don't attack in peaceful mode! Even if we are attacked
+		}
+	}
+
 	void updateDaily()
 	{
+
+		linked->updateDaily();
+
 		linked->timeSinceLastLauncher++;
 		if (linked->launchReady())
 		{
-			printf("AI can launch!");
 			aiLaunch();
 		}
 
-		linked->updateDaily();
+
+		linked->timeSinceAttack++;
+		if (linked->timeSinceAttack > 25)
+		{
+			if (personality == Personality::FRIENDLY)
+			{
+				std::vector<Empire*> enemies;
+				// Only attack enemies/hated
+				for (std::map<Empire*, Relation>::iterator it = relations.begin(); it != relations.end(); ++it)
+				{
+					if (it->second == Relation::ENEMIES || it->second == Relation::HATRED)
+					{
+						enemies.push_back(it->first);
+					}
+				}
+				if (enemies.size() != 0)
+				{
+					int n = rand() % enemies.size();
+
+					aiAttack(enemies[n]);
+				}
+
+			}
+			else if (personality == Personality::NORMAL)
+			{
+				// Attack enemies/hated or if no planet is free the weakest (TODO)
+				std::vector<Empire*> enemies;
+				// Only attack enemies/hated
+				for (std::map<Empire*, Relation>::iterator it = relations.begin(); it != relations.end(); ++it)
+				{
+					if (it->second == Relation::ENEMIES || it->second == Relation::HATRED)
+					{
+						enemies.push_back(it->first);
+					}
+				}
+				if (enemies.size() != 0)
+				{
+					int n = rand() % enemies.size();
+
+					aiAttack(enemies[n]);
+				}
+			}
+			else
+			{
+				// Attack enemies/hated/competency or at random anybody
+				if (rand() < RAND_MAX / 6)
+				{
+					std::vector<Empire*> pep;
+					// Attack a random person
+					for (std::map<Empire*, Relation>::iterator it = relations.begin(); it != relations.end(); ++it)
+					{
+						pep.push_back(it->first);
+					}
+
+					int n = rand() % pep.size();
+
+					aiAttack(pep[n]);
+				}
+				else
+				{
+					std::vector<Empire*> enemies;
+					// Only attack enemies/hated
+					for (std::map<Empire*, Relation>::iterator it = relations.begin(); it != relations.end(); ++it)
+					{
+						if (it->second == Relation::ENEMIES || it->second == Relation::HATRED)
+						{
+							enemies.push_back(it->first);
+						}
+					}
+					if (enemies.size() != 0)
+					{
+						int n = rand() % enemies.size();
+
+						aiAttack(enemies[n]);
+					}
+				}
+				
+			}
+			linked->timeSinceAttack = 0;
+		}
 
 		/*printf("-----------------------\n");
 		printf("AI State:\n");
@@ -1232,7 +1370,7 @@ public:
 
 	bool shown = false;
 
-	char nameBuff[256];
+	char nameBuff[256] = "My Empire";
 
 	int choosenTileType = 0;
 
@@ -1259,6 +1397,11 @@ public:
 
 	int selectedMode = 0;
 	
+	void receiveAttack(Empire* attacker)
+	{
+
+	}
+
 	void drawAttackPlaner()
 	{
 		ImGui::Begin("Attack Planner");
@@ -1275,6 +1418,7 @@ public:
 				if (ImGui::Button("Do Attack! (Damage)"))
 				{
 					linked->attack(attackTarget, attackSoldierCount, false);
+					attackTarget->owner->aicontroller->receiveAttack(this->linked);
 				}
 
 				ImGui::SameLine();
@@ -1282,6 +1426,7 @@ public:
 				if (ImGui::Button("Do Attack! (Annex)"))
 				{
 					linked->attack(attackTarget, attackSoldierCount, true);
+					attackTarget->owner->aicontroller->receiveAttack(this->linked);
 				}
 			}
 			else
@@ -1420,6 +1565,26 @@ public:
 			ImGui::TextWrapped("You should also build a millitary. It will require a fair ammount of metal, food and population.");
 			ImGui::EndChild();
 		}
+		else if (guidePage == 4)
+		{
+			ImGui::Text("War:");
+			ImGui::BeginChild("GuideContent", ImVec2(250, 300), true);
+			ImGui::TextWrapped("War in this game is done via the 'People' menu");
+			ImGui::Spacing();
+			ImGui::TextWrapped("There you can create soldiers from your population and some resources and launch attacks");
+			ImGui::Spacing();
+			ImGui::TextWrapped("To launch attacks you use the 'Attack Planner' window");
+			ImGui::Spacing();
+			ImGui::TextWrapped("There you can attack any planet from other civilization in two ways:");
+			ImGui::Spacing();
+			ImGui::TextWrapped("- Annex: If you win the planet (and a part of its population) will become yours");
+			ImGui::Spacing();
+			ImGui::TextWrapped("- Destroy: You will focus on damaging buildings on the target planet");
+			ImGui::Spacing();
+			ImGui::TextWrapped("All of these will damage buildings in the target planet");
+			ImGui::EndChild();
+
+		}
 		if (ImGui::Button("<"))
 		{
 			if (guidePage > 0)
@@ -1526,8 +1691,8 @@ public:
 				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
 				ImGui::SameLine();
 				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", MINE_PRICE);
-				ImGui::TextWrapped("Extracts metal depending on the planet's concentration (Base %i). %iC every month",
-					MINE_GENERATION, MINE_MAINTENANCE);
+				ImGui::TextWrapped("Extracts metal depending on the planet's concentration (Base %i). %iC maintenance every day. Employs %i people!",
+					MINE_GENERATION, MINE_MAINTENANCE, MINE_EMPLOYMENT);
 				ImGui::EndChild();
 			}
 			else if (i == BUILDING_LAUNCHER)
@@ -1593,7 +1758,7 @@ public:
 				ImGui::BeginChild("HFARMSSUBFRAME", ImVec2(180, 70), true);
 				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
 				ImGui::SameLine();
-				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", FARM_PRICE);
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", HFARM_PRICE);
 				ImGui::TextWrapped("Generates %i food every day. Uses %iC to do so. Employs %i persons",
 					HFARM_GENERATION, HFARM_MAINTENANCE, HFARM_EMPLOYMENT);
 				ImGui::EndChild();
@@ -1668,6 +1833,9 @@ public:
 		ImGui::End();
 	}
 
+	bool peaceful = false;
+	int aiCount = 4;
+
 	void drawWorldChooserWindow()
 	{
 		int citem;
@@ -1703,6 +1871,9 @@ public:
 
 			ImGui::InputText("Civ Name", nameBuff, 256);
 
+			ImGui::Checkbox("Peaceful Mode", &peaceful);
+			ImGui::InputInt("AI count: ", &aiCount, 1, 2);
+
 			if (ImGui::Button("Choose"))
 			{
 				// Choose this planet
@@ -1719,7 +1890,7 @@ public:
 				shown = false;
 			}
 			ImGui::Separator();
-			ImGui::Text("Tip: Check the manual for help");
+			ImGui::Text("Tip: Check the guide for help");
 			ImGui::End();
 		}
 
@@ -2061,7 +2232,14 @@ public:
 			}
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Population: ");
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "12312");
+			if (focused->owner != NULL)
+			{
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%i", focused->owner->population);
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "0");
+			}
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "| Tiles: ");
 			ImGui::SameLine();
@@ -2176,11 +2354,17 @@ public:
 	bool fullscreen = false;
 	bool settingsOpen = false;
 
+	float musicVolume = 0.25f;
+	float fxVolume = 0.25f;
+	sf::Sound errorP;
+
 	void drawSettingsWindow()
 	{
 		ImGui::Begin("Settings");
 		ImGui::Checkbox("Fullscreen", &fullscreen);
 		ImGui::Checkbox("Limit FPS", &limitFPS);
+		ImGui::SliderFloat("Music Vol.", &musicVolume, 0.0f, 1.0f);
+		ImGui::SliderFloat("Effects Vol.", &fxVolume, 0.0f, 1.0f);
 		if (ImGui::Button("Close"))
 		{
 			settingsOpen = false;
@@ -2319,7 +2503,7 @@ public:
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i (%i/d)", linked->food, linked->fooddaily);
 		ImGui::SameLine();
-		ImGui::TextColored(ImVec4(0.8f, 0.7f, 0.1f, 1.0f), "F");
+		ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "F");
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i (%i/d)", linked->tech, linked->techdaily);
 		ImGui::SameLine();
@@ -2603,6 +2787,11 @@ public:
 								linked->money -= Planet::getBuildingPrice(choosenTileType);
 								focused->tilesBuilding[tileC] = 0.0f;
 							}
+							else
+							{
+								// Play sound
+								errorP.play();
+							}
 						}
 						// BUY THE TILE
 					}
@@ -2777,7 +2966,12 @@ public:
 		{
 			empires[i]->otherEmpires.push_back(empires[empires.size() - 1]);
 			nAi->relations[empires[i]] = Relation::NEUTRAL;
+			if (empires[i]->aicontroller != NULL)
+			{
+				empires[i]->aicontroller->relations[empires[empires.size() - 1]] = Relation::NEUTRAL;
+			}
 		}
+
 
 		aiempires.push_back(nAi);
 

@@ -148,10 +148,6 @@ int main()
 	manager.player = &empirePlayer;
 	manager.createPlayerEmpire();
 
-	manager.createAIEmpire();
-	/*manager.createAIEmpire();
-	manager.createAIEmpire();*/
-
 	empirePlayer.resize(startSize.x, startSize.y);
 
 	empirePlayer.gear = gear;
@@ -161,19 +157,34 @@ int main()
 	sf::Sound menuMusic;
 
 	sf::SoundBuffer editBuffer;
+	sf::SoundBuffer playBuffer;
+
+	sf::SoundBuffer errorBuffer;
+
+	errorBuffer.loadFromFile("Resource/music/error.wav");
+
+	empirePlayer.errorP = sf::Sound(errorBuffer);
+
 	//sf::Sound editMusic;
 
 	menuBuffer.loadFromFile("Resource/music/menumusic.ogg");
 	menuMusic.setBuffer(menuBuffer);
 
 	editBuffer.loadFromFile("Resource/music/editmusic.ogg");
+	playBuffer.loadFromFile("Resource/music/playmusic.ogg");
 	/*editMusic.setBuffer(editBuffer);
 
 	menuMusic.setLoop(true);
 	editMusic.setLoop(true);
 	*/
+
+	menuMusic.setVolume(0.25f);
+	menuMusic.setLoop(true);
 	menuMusic.play();
 
+
+
+	bool hasStarted = false;
 
 	if(empirePlayer.limitFPS)
 		window.setFramerateLimit(60);
@@ -227,6 +238,9 @@ int main()
 
 			}
 		}
+
+		menuMusic.setVolume(empirePlayer.musicVolume * 100);
+		empirePlayer.errorP.setVolume(empirePlayer.fxVolume * 100);
 
 		if (empirePlayer.limitFPS)
 		{
@@ -287,19 +301,26 @@ int main()
 		}
 		else if (manager.player->state == PlayerState::VIEW_MODE)
 		{
-			if (menuMusic.getBuffer() != &menuBuffer)
+			if (menuMusic.getBuffer() != &playBuffer)
 			{
-				menuMusic.setBuffer(menuBuffer);
+				menuMusic.setBuffer(playBuffer);
+				menuMusic.setPlayingOffset(sf::seconds(0));
+				menuMusic.play();
 			}
 			// TODO
 		}
 
 		if (manager.player->state != PlayerState::CHOOSE_WORLD)
 		{
-			/*if (menuMusic.getStatus() == sf::Music::Playing)
+			if (hasStarted == false)
 			{
-				menuMusic.stop();
-			}*/
+				for (int i = 0; i < manager.player->aiCount; i++)
+				{
+					manager.createAIEmpire();
+				}
+				hasStarted = true;
+			}
+
 			timeStepper += dt * empirePlayer.timeSpeed;
 			if (timeStepper >= 1.0f)
 			{
@@ -324,6 +345,8 @@ int main()
 		}
 		else
 		{
+			
+
 			/*if (menuMusic.getStatus() != sf::Music::Playing)
 			{
 				/*menuMusic.play();
@@ -361,7 +384,19 @@ int main()
 			{
 				logoSpr.setScale(1.0f, 1.0f);
 			}
-			logoSpr.setPosition(sf::Vector2f(renderView.getCenter().x, 90.0f));
+			if (empirePlayer.focused == NULL)
+			{
+				
+				logoSpr.setPosition(sf::Vector2f(renderView.getCenter().x, 90.0f));
+			}
+			else
+			{
+				logoSpr.setPosition(sf::Vector2f(
+					empirePlayer.focused->worldPosition.x + empirePlayer.focused->radius, 
+					empirePlayer.focused->worldPosition.y - 
+					(renderView.getSize().y / 4) + (empirePlayer.focused->radius * 0.5f)));
+			}
+
 			window.draw(logoSpr);
 		}
 

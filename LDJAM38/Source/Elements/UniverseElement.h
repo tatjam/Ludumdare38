@@ -41,7 +41,7 @@ public:
 		"TinyPlanet Corps",
 		"Jupiter Exploration",
 		"ComCast Communications",
-		"Space-Explorer 9",
+		"Ozzy's Cat Food Corporation",
 		"Mann's Enterprise",
 		"Kepler's Vision",
 		"Xin-Yang Mining Corps",
