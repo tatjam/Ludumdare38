@@ -158,79 +158,94 @@ void Planet::makeDrawables()
 
 void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 {
-	//TODO proper night time shade drawing
+	// We only draw if the planet is inside the view
 
-	land.setPosition(sf::Vector2f(worldPosition.x + radius,
-		worldPosition.y + radius));
-	crust.setPosition(sf::Vector2f(worldPosition.x + (radius * 0.01f) + radius, 
-		worldPosition.y + (radius * 0.01f) + radius));
-	inner.setPosition(sf::Vector2f(worldPosition.x + radius,
-		worldPosition.y + radius));
-	nightShade.setPosition(sf::Vector2f(worldPosition.x + radius, worldPosition.y + radius));
-	atmoSpr.setPosition(sf::Vector2f(worldPosition.x + radius, worldPosition.y + radius));
+	sf::View v = win->getView();
 
-	int rotationN = 0;
-	// Get angle to star (0, 0)
-	float angle = angleInStar;
-
-	rotationN = (angle * 180) / PI + 180;
-
-	nightShade.setRotation(rotationN);
-	crust.setRotation(rotation);
-	land.setRotation(rotation);
-
-	atmoSpr.setRotation(rotationN);
-
-
-	// Draw all buildings
-	for (int i = 0; i < size; i++)
+	if (
+		worldPosition.x < v.getCenter().x + v.getSize().x
+		&& worldPosition.y < v.getCenter().y + v.getSize().y
+		&& worldPosition.x > v.getCenter().x - v.getSize().x
+		&& worldPosition.y > v.getCenter().y - v.getSize().y)
 	{
-		int btype = tiles[i];
-		if (btype != 0)
+
+		land.setPosition(sf::Vector2f(worldPosition.x + radius,
+			worldPosition.y + radius));
+		crust.setPosition(sf::Vector2f(worldPosition.x + (radius * 0.01f) + radius,
+			worldPosition.y + (radius * 0.01f) + radius));
+		inner.setPosition(sf::Vector2f(worldPosition.x + radius,
+			worldPosition.y + radius));
+		nightShade.setPosition(sf::Vector2f(worldPosition.x + radius, worldPosition.y + radius));
+		atmoSpr.setPosition(sf::Vector2f(worldPosition.x + radius, worldPosition.y + radius));
+
+		int rotationN = 0;
+		// Get angle to star (0, 0)
+		float angle = angleInStar;
+
+		rotationN = (angle * 180) / PI + 180;
+
+		nightShade.setRotation(rotationN);
+		crust.setRotation(rotation);
+		land.setRotation(rotation);
+
+		atmoSpr.setRotation(rotationN);
+
+
+		// Draw all buildings
+		for (int i = 0; i < size; i++)
 		{
-			sf::Sprite b;
-			if(btype == BUILDING_APPARTMENT)
-				b = sf::Sprite(buildings["apps"]);
-			if (btype == BUILDING_HOUSE)
-				b = sf::Sprite(buildings["house"]);
-			if (btype == BUILDING_LABORATORY)
-				b = sf::Sprite(buildings["lab"]);
-			if (btype == BUILDING_FARM)
-				b = sf::Sprite(buildings["farm"]);
-			if (btype == BUILDING_MINE)
-				b = sf::Sprite(buildings["mine"]);
-			if (btype == BUILDING_LAUNCHER)
-				b = sf::Sprite(buildings["launcher"]);
-			if (btype == BUILDING_MARKET)
-				b = sf::Sprite(buildings["market"]);
-			b.setOrigin(16, 64);
-			b.setPosition(getSectorPosition(i) + worldPosition);
-			b.setRotation(getSectorAngle(i));
-			int alpha = tilesBuilding[i] * 255;
-			if (alpha > 255)
+			int btype = tiles[i];
+			if (btype != 0)
 			{
-				alpha = 255;
+				sf::Sprite b;
+				if (btype == BUILDING_APPARTMENT)
+					b = sf::Sprite(buildings["apps"]);
+				if (btype == BUILDING_HOUSE)
+					b = sf::Sprite(buildings["house"]);
+				if (btype == BUILDING_LABORATORY)
+					b = sf::Sprite(buildings["lab"]);
+				if (btype == BUILDING_FARM)
+					b = sf::Sprite(buildings["farm"]);
+				if (btype == BUILDING_MINE)
+					b = sf::Sprite(buildings["mine"]);
+				if (btype == BUILDING_LAUNCHER)
+					b = sf::Sprite(buildings["launcher"]);
+				if (btype == BUILDING_MARKET)
+					b = sf::Sprite(buildings["market"]);
+				if (btype == BUILDING_SMARKET)
+					b = sf::Sprite(buildings["smarket"]);
+				b.setOrigin(16, 64);
+				b.setPosition(getSectorPosition(i) + worldPosition);
+				b.setRotation(getSectorAngle(i));
+				int alpha = tilesBuilding[i] * 255;
+				if (alpha > 255)
+				{
+					alpha = 255;
+				}
+				if (alpha < 255)
+				{
+					b.setColor(sf::Color(255, 64, 64, alpha));
+				}
+				else
+				{
+					b.setColor(sf::Color(255, 255, 255, alpha));
+				}
+				win->draw(b);
 			}
-			if (alpha < 255)
-			{
-				b.setColor(sf::Color(255, 64, 64, alpha));
-			}
-			else
-			{
-				b.setColor(sf::Color(255, 255, 255, alpha));
-			}
-			win->draw(b);
 		}
+		if (hasAtmosphere)
+		{
+			win->draw(atmoSpr);
+		}
+		win->draw(land);
+		win->draw(crust);
+		win->draw(inner);
+
+		win->draw(nightShade);
 	}
-	if (hasAtmosphere)
-	{
-		win->draw(atmoSpr);
-	}
+
+	// Draw dummy thing to stop GL bug
+	land.setPosition(sf::Vector2f(-99999.0f, -99999.f));
 	win->draw(land);
-	win->draw(crust);
-	win->draw(inner);
-
-	win->draw(nightShade);
-
 
 }

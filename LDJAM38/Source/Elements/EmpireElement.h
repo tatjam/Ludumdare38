@@ -17,14 +17,16 @@ enum Relation
 	HATRED
 };
 
-#define STARTING_MONEY 2500
-#define STARTING_FOOD 1000
+#define STARTING_MONEY 1500
+#define STARTING_FOOD 5000
 #define STARTING_TECH 50
 #define STARTING_METAL 50
 
-#define FOOD_PER_PERSON 0.5f
+#define FOOD_PER_PERSON 0.3f
 
 
+#define METAL_FOR_LAUNCH 500
+#define TECH_FOR_LAUNCH 500
 
 enum EventSeverity
 {
@@ -53,6 +55,11 @@ struct Event
 };
 
 class EmpireAI;
+
+
+#define CASH_PER_SOLDIER 200
+#define METAL_PER_SOLDIER 100
+#define TECH_PER_SOLDIER 100
 
 class Empire
 {
@@ -103,9 +110,13 @@ public:
 	float wantedTaxes = 0.5f;
 	float taxes = 0.5f;
 
+
 	float workEfficiency = 1.0f;
 
 	std::vector<Planet*> planets;
+
+	Planet* toBeAdded;
+	bool waitingToAdd = false;
 
 	Empire()
 	{
@@ -118,7 +129,29 @@ public:
 
 	void updateMonthly()
 	{
+
+		if (waitingToAdd)
+		{
+			planets.push_back(toBeAdded);
+			toBeAdded->alreadyOwned = true;
+			waitingToAdd = false;
+			toBeAdded = NULL;
+			events.push_back(Event(EventSeverity::FATAL, "Your vessel has arrived!"));
+
+
+		}
+
 		taxes = wantedTaxes;
+
+		// You pay for every citizen a bit (monthly)? It's exponential so that late game empires are not
+		// cash mountains
+		money -= (int)((float)population * (float)population * 0.005f);
+		
+		if (food < population)
+		{
+			events.push_back(Event(EventSeverity::FATAL, "Your food stock is very low! Your population will starve!"));
+			happiness -= 10;
+		}
 
 		if (money < 0)
 		{
@@ -139,10 +172,11 @@ public:
 			workEfficiency = 0.5f;
 		}
 
-		if (happiness >= 1)
+		if (happiness >= 0)
 		{
-			// Every 2 happiness points you get a person
-			population += (int)(0.5f * happiness);
+			// Every 1 happiness points you get you 2 person
+			// 0 gets you stable population
+			population += (int)(2.0f * happiness);
 		}
 		else
 		{
@@ -163,9 +197,61 @@ public:
 		}
 	}
 
+	bool launchReady()
+	{
+		if (metal > METAL_FOR_LAUNCH && tech > TECH_FOR_LAUNCH)
+		{
+			for (int i = 0; i < planets.size(); i++)
+			{
+				for (int t = 0; t < planets[i]->size; t++)
+				{
+					if (planets[i]->tiles[t] == BUILDING_LAUNCHER)
+					{
+						if (planets[i]->tilesBuilding[t] >= 1.0f)
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	void launchVehicle(Planet* target)
+	{
+		for (int i = 0; i < planets.size(); i++)
+		{
+			for (int t = 0; t < planets[i]->size; t++)
+			{
+				if (planets[i]->tiles[t] == BUILDING_LAUNCHER)
+				{
+					if (planets[i]->tilesBuilding[t] >= 1.0f)
+					{
+						if (target->owner == NULL)
+						{
+							events.push_back(Event(EventSeverity::FATAL, "You have launched a vehicle! It will arrive in a month"));
+							waitingToAdd = true;
+							toBeAdded = target;
+							target->owner = this;
+							target->alreadyOwned = false;
+							planets[i]->tiles[t] = 0;
+							planets[i]->tilesBuilding[t] = 0;
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// Called every day
 	void updateDaily()
 	{
+		/*if (events.size() > 5)
+		{
+			events.erase(events.begin());
+		}*/
 
 		happiness = 0;
 
@@ -173,6 +259,14 @@ public:
 		previousFood.push_back(food);
 		previousTech.push_back(tech);
 		previousMoney.push_back(money);
+
+
+		if (food < population)
+		{
+			happiness -= 10;
+			population -= 1;
+		}
+
 
 		if (launchCount != 0)
 		{
@@ -210,6 +304,11 @@ public:
 
 		for (int i = 0; i < planets.size(); i++)
 		{
+			if (planets[i]->easyHabitable)
+			{
+				// 2 free happiness for habitable planet. Maybe more or less required
+				happiness += 2;
+			}
 			// Do daily maintenance and daily generations
 			// Also calculate employment and run buildings as required
 			for (int t = 0; t < planets[i]->size; t++)
@@ -244,8 +343,8 @@ public:
 							moneydaily -= LAB_MAINTENANCE;
 							if (money >= LAB_MAINTENANCE && usedPopulation < population)
 							{
-								tech += LAB_GENERATION;
-								techdaily += LAB_GENERATION;
+								tech += (int)((float)LAB_GENERATION * planets[i]->scienceBoost);
+								techdaily += (int)((float)LAB_GENERATION * planets[i]->scienceBoost);
 
 							}
 							if (usedPopulation + LAB_EMPLOYMENT < population)
@@ -280,8 +379,8 @@ public:
 
 							if (money >= FARM_MAINTENANCE && usedPopulation < population)
 							{
-								food += FARM_GENERATION;
-								fooddaily += FARM_GENERATION;
+								food += (int)((float)FARM_GENERATION * planets[i]->foodBoost);
+								fooddaily += (int)((float)FARM_GENERATION * planets[i]->foodBoost);
 							}
 
 							if (usedPopulation + FARM_EMPLOYMENT < population)
@@ -301,8 +400,8 @@ public:
 
 							if (money >= MINE_MAINTENANCE && usedPopulation < population)
 							{
-								metal += MINE_GENERATION;
-								metaldaily += MINE_GENERATION;
+								metal += (int)((float)MINE_GENERATION * planets[i]->mineralBoost);
+								metaldaily += (int)((float)MINE_GENERATION * planets[i]->mineralBoost);
 							}
 
 							if (usedPopulation + MINE_EMPLOYMENT < population)
@@ -332,12 +431,38 @@ public:
 								usedPopulation = population;
 							}
 							break;
+						case BUILDING_SMARKET:
+							workplaces += SMARKET_EMPLOYMENT;
+
+							if (usedPopulation < population)
+							{
+								money += SMARKET_GENERATION;
+								moneydaily += SMARKET_GENERATION;
+							}
+
+							if (usedPopulation + SMARKET_EMPLOYMENT < population)
+							{
+								usedPopulation += SMARKET_EMPLOYMENT;
+							}
+							else
+							{
+								usedPopulation = population;
+							}
+							break;
 						}
 					}
 					else
 					{
 						float increase = 1 / (float)Planet::getBuildingTime(planets[i]->tiles[t]);
 						planets[i]->tilesBuilding[t] += increase;
+
+						if (planets[i]->tilesBuilding[t] >= 1.0f)
+						{
+							if (planets[i]->tiles[t] == BUILDING_LAUNCHER)
+							{
+								events.push_back(Event(EventSeverity::FATAL, "Your space launch center is ready!"));
+							}
+						}
 					}
 				}
 			}
@@ -399,8 +524,6 @@ public:
 
 };
 
-#define METAL_FOR_LAUNCH 2000
-#define TECH_FOR_LAUNCH 2000
 
 #define AI_SAFE_MARGIN 500
 
@@ -1026,7 +1149,23 @@ public:
 					MARKET_GENERATION, MARKET_EMPLOYMENT);
 				ImGui::EndChild();
 			}
-
+			else if (i == BUILDING_SMARKET)
+			{
+				if (ImGui::ImageButton(focused->buildings["smarket"]))
+				{
+					choosenTileType = i;
+					choosenTileImage = &focused->buildings["smarket"];
+					choosenTileName = "Small Market";
+				}
+				ImGui::SameLine();
+				ImGui::BeginChild("SMARKETSSUBFRAME", ImVec2(180, 70), true);
+				ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Price: ");
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(1.0, 0.8, 0.0, 1.0), "%iC", SMARKET_PRICE);
+				ImGui::TextWrapped("Generates %iC on a daily basis. Requires %i employees",
+					SMARKET_GENERATION, SMARKET_EMPLOYMENT);
+				ImGui::EndChild();
+			}
 			/*if (i == choosenTileType)
 			{
 				ImGui::PopStyleColor(1);
@@ -1212,6 +1351,8 @@ public:
 		ImGui::End();
 	}
 
+	int choosenSoldiers = 1;
+
 	void drawPeopleWindow()
 	{
 		ImGui::Begin("Population");
@@ -1246,6 +1387,41 @@ public:
 			(int)(((float)linked->housed / (float)linked->total_houses) * 100.f),
 			linked->housed, linked->total_houses);
 
+
+		ImGui::Separator();
+		ImGui::Text("Soldier Creation:");
+		ImGui::SliderInt("Ammount", &choosenSoldiers, 1, linked->population - 1);
+		int cashCost = choosenSoldiers * CASH_PER_SOLDIER;
+		int metalCost = choosenSoldiers * METAL_PER_SOLDIER;
+		int techCost = choosenSoldiers * TECH_PER_SOLDIER;
+		ImGui::Text("Cost: %iC | %iM | %iT", cashCost, metalCost, techCost);
+		ImGui::Spacing();
+
+		if (cashCost < linked->money && metalCost < linked->metal && techCost < linked->tech)
+		{
+			if (ImGui::Button("Create Soldiers"))
+			{
+				linked->money -= cashCost;
+				linked->metal -= metalCost;
+				linked->tech -= techCost;
+
+				linked->population -= choosenSoldiers;
+				linked->soldiers += choosenSoldiers;
+			}
+		}
+		else
+		{
+			ImGui::Text("Not enough resources!");
+		}
+
+
+
+		ImGui::Spacing();
+
+		ImGui::Button("Open Attack Planner");
+
+
+		ImGui::Separator();
 
 		if (ImGui::Button("Close"))
 		{
@@ -1282,6 +1458,12 @@ public:
 				(int)(powf(-1.5f*(linked->taxes-2.0f), 3.0f)));
 		}
 
+
+		ImGui::TextColored(ImVec4(0.8, 0.8, 0.8, 1.0), "Monthly Maintenance Costs:");
+		ImGui::SameLine();
+		int change = (int)((float)linked->population * (float)linked->population * 0.005f);
+		ImGui::Text("%i", change);
+
 		ImGui::Separator();
 
 		ImGui::PlotLines("Cash", (float*)linked->previousMoney.data(), linked->previousMoney.size(), 
@@ -1314,15 +1496,65 @@ public:
 		ImGui::End();
 	}
 
+	Planet* launchTarget = NULL;
+
 	void drawEmpireWindow()
 	{
+
+		if (linked->launchReady())
+		{
+			ImGui::Begin("Space Launch Ready");
+
+			ImGui::Text("You have built a space launcher and it's ready to launch a vessel!");
+			ImGui::Text("%i Metal and %i Science will be consumed!", METAL_FOR_LAUNCH, TECH_FOR_LAUNCH);
+			ImGui::Text("Select your target from the list:");
+			ImGui::Separator();
+			for (int i = 0; i < universe->planets.size(); i++)
+			{
+				if(universe->planets[i]->owner == NULL)
+				{
+					if(ImGui::Button(universe->planets[i]->name.c_str()))
+					{
+						linked->launchVehicle(universe->planets[i]);
+					}
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::Text("Planet Information");
+						ImGui::Separator();
+						ImGui::TextColored(ImVec4(0.7, 0.7, 0.7, 1.0), "Size: ");
+						ImGui::SameLine();
+						ImGui::Text("%i", universe->planets[i]->size);
+
+						if (universe->planets[i]->easyHabitable)
+						{
+							ImGui::TextColored(ImVec4(0.2, 1.0, 0.2, 1.0), "Habitable");
+						}
+						else
+						{
+							ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "Non-Habitable");
+						}
+
+						ImGui::Text("Food Multiplier: %f", focused->foodBoost);
+						ImGui::Text("Mineral Multiplier: %f", focused->mineralBoost);
+						ImGui::Text("Science Multiplier: %f", focused->scienceBoost);
+
+
+
+						ImGui::EndTooltip();
+					}
+					ImGui::Spacing();
+				}
+			}
+
+			ImGui::End();
+		}
 
 		// Event window
 		int eventsShown = 0;
 
 		for (int i = 0; i < linked->events.size(); i++)
 		{
-
 			if (linked->events[i].text != "" && eventsShown < 5)
 			{
 				eventsShown++;
@@ -1361,7 +1593,7 @@ public:
 			ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Focused on ");
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", focused->name.c_str());
-			if (focused->owner == linked)
+			if (focused->owner == linked && focused->alreadyOwned)
 			{
 				ImGui::SameLine();
 				ImGui::Spacing();
@@ -1503,6 +1735,7 @@ public:
 	{
 		ImGui::Begin("Settings");
 		ImGui::Checkbox("Fullscreen", &fullscreen);
+		ImGui::Checkbox("Limit FPS", &limitFPS);
 		if (ImGui::Button("Close"))
 		{
 			settingsOpen = false;
@@ -1524,7 +1757,7 @@ public:
 
 		for (int i = 0; i < universe->count; i++)
 		{
-			bool isPlanetOurs = contains(&linked->planets, universe->planets[i]);
+			bool isPlanetOurs = universe->planets[i]->owner == linked;
 
 			if (isPlanetOurs)
 			{
@@ -1653,7 +1886,7 @@ public:
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "| %i", linked->happiness);
 		ImGui::SameLine();
-		if (linked->happiness > 0)
+		if (linked->happiness >= 0)
 		{
 			ImGui::TextColored(ImVec4(0.2, 1.0f, 0.2, 1.0f), ":)");
 		}
@@ -1682,25 +1915,7 @@ public:
 		{
 			drawEmpireWindow();
 			drawSystemWindow();
-			if (ecoWindow)
-			{
-				drawEconomyWindow();
-			}
-
-			if (popWindow)
-			{
-				drawPeopleWindow();
-			}
-
-			if (retWindow)
-			{
-				drawRelationsWindow();
-			}
-
-			if (settingsOpen)
-			{
-				drawSettingsWindow();
-			}
+			
 
 		}
 		else if (state == PlayerState::EDIT_MODE)
@@ -1712,6 +1927,26 @@ public:
 		else if (state == PlayerState::CHOOSE_WORLD)
 		{
 			drawWorldChooserWindow();
+		}
+
+		if (ecoWindow)
+		{
+			drawEconomyWindow();
+		}
+
+		if (popWindow)
+		{
+			drawPeopleWindow();
+		}
+
+		if (retWindow)
+		{
+			drawRelationsWindow();
+		}
+
+		if (settingsOpen)
+		{
+			drawSettingsWindow();
 		}
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::F1))
@@ -1735,6 +1970,8 @@ public:
 	
 	bool wasMousePressed = false;
 
+	bool limitFPS = true;
+
 	void updateDaily()
 	{
 		linked->updateDaily();
@@ -1752,14 +1989,14 @@ public:
 
 		if (fullscreen && !previousFullscreen)
 		{
-			win->create(sf::VideoMode::getFullscreenModes()[0], "FULLSCREEN Tinyplanets", sf::Style::Fullscreen);
+			win->create(sf::VideoMode::getFullscreenModes()[0], "FULLSCREEN TinyPlanets", sf::Style::Fullscreen);
 			previousFullscreen = true;
 			updateWindow = true;
 
 		}
 		else if (!fullscreen && previousFullscreen)
 		{
-			win->create(sf::VideoMode(1000, 650), "Tinyplanets", sf::Style::Default);
+			win->create(sf::VideoMode(1000, 650), "TinyPlanets", sf::Style::Default);
 			previousFullscreen = false;
 			updateWindow = true;
 		}
@@ -1773,20 +2010,24 @@ public:
 		frameAverage += dt;
 		frameAverage /= 2;
 
-		timeStepper += dt * timeSpeed;
-		if (timeStepper >= 1.0f)
+		if (state != PlayerState::CHOOSE_WORLD)
 		{
-			timeStepper = 0.0f;
-			day++;
-			if (day > 30)
+
+			timeStepper += dt * timeSpeed;
+			if (timeStepper >= 1.0f)
 			{
-				month++;
-				day = 1;
-			}
-			if (month > 12)
-			{
-				month = 1;
-				year++;
+				timeStepper = 0.0f;
+				day++;
+				if (day > 30)
+				{
+					month++;
+					day = 1;
+				}
+				if (month > 12)
+				{
+					month = 1;
+					year++;
+				}
 			}
 		}
 

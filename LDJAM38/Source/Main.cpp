@@ -1,5 +1,6 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "ImGui/imgui.h"
 #include "ImGui/imgui-SFML.h"
 
@@ -19,6 +20,10 @@ void resize(int width, int height, sf::Rect<float> &empireWindow, sf::Rect<float
 
 int main()
 {
+
+
+
+
 	float backdropScale = 0.0f;
 
 	std::map<std::string, sf::Texture> buildings;
@@ -39,6 +44,8 @@ int main()
 	sf::Texture launcher = sf::Texture();
 	sf::Texture mine = sf::Texture();
 	sf::Texture market = sf::Texture();
+	sf::Texture logo = sf::Texture();
+	sf::Texture smarket = sf::Texture();
 
 	cross.loadFromFile("Resource/cross.png");
 	gear.loadFromFile("Resource/gear.png");
@@ -56,6 +63,8 @@ int main()
 	mine.loadFromFile("Resource/building/mine.png");
 	launcher.loadFromFile("Resource/building/launcher.png");
 	market.loadFromFile("Resource/building/market.png");
+	smarket.loadFromFile("Resource/building/smarket.png");
+	logo.loadFromFile("Resource/logo.png");
 	space.setRepeated(true);
 
 	buildings["apps"] = appartment;
@@ -65,11 +74,13 @@ int main()
 	buildings["mine"] = mine;
 	buildings["launcher"] = launcher;
 	buildings["market"] = market;
+	buildings["smarket"] = smarket;
 
 	sf::Rect<float> empireWindow;
 	sf::Rect<float> systemWindow;
 
 
+	sf::Sprite logoSpr = sf::Sprite(logo);
 	sf::Sprite starSpr = sf::Sprite(star);
 	sf::Sprite backdrop = sf::Sprite(space);
 
@@ -77,7 +88,7 @@ int main()
 
 	backdropScale = std::max(startSize.x / 512, startSize.y / 512);
 
-	sf::RenderWindow window(sf::VideoMode(startSize.x, startSize.y), "SFML works!");
+	sf::RenderWindow window(sf::VideoMode(startSize.x, startSize.y), "TinyPlanets");
 
 	resize((int)startSize.x, (int)startSize.y, empireWindow, systemWindow);
 	
@@ -143,6 +154,27 @@ int main()
 	empirePlayer.gear = gear;
 	empirePlayer.cross = cross;
 
+	sf::SoundBuffer menuBuffer;
+	sf::Sound menuMusic;
+
+	sf::SoundBuffer editBuffer;
+	sf::Sound editMusic;
+
+	menuBuffer.loadFromFile("Resource/music/overturetospace.ogg");
+	menuMusic.setBuffer(menuBuffer);
+
+	editBuffer.loadFromFile("Resource/music/planetview.ogg");
+	editMusic.setBuffer(editBuffer);
+
+	menuMusic.setLoop(true);
+	editMusic.setLoop(true);
+
+	menuMusic.play();
+
+
+	if(empirePlayer.limitFPS)
+		window.setFramerateLimit(60);
+
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -163,6 +195,7 @@ int main()
 
 			//resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
 			empirePlayer.resize(window.getSize().x, window.getSize().y);
+
 		}
 
 		while (window.pollEvent(event))
@@ -188,9 +221,18 @@ int main()
 				resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
 				empirePlayer.resize((int)event.size.width, (int)event.size.height);
 				printf("Now scale %f\n", backdropScale);
+
 			}
 		}
 
+		/*if (empirePlayer.limitFPS)
+		{
+			window.setFramerateLimit(60);
+		}
+		else
+		{
+			window.setFramerateLimit(-1);
+		}*/
 
 		dtt = dtClock.restart();
 		dt = dtt.asSeconds();
@@ -231,26 +273,62 @@ int main()
 				renderView.getCenter().y - renderView.getSize().y / 2);
 		}
 
-		timeStepper += dt * empirePlayer.timeSpeed;
-		if (timeStepper >= 1.0f)
+		if (manager.player->state == PlayerState::EDIT_MODE)
 		{
-			timeStepper = 0.0f;
-			day++;
-			if (manager.player->state != PlayerState::CHOOSE_WORLD)
+			/*if (menuMusic.getStatus() == sf::Music::Playing)
 			{
-				manager.updateDaily();
+				menuMusic.stop();
 			}
-			if (day > 30)
+
+			if (editMusic.getStatus() != sf::Music::Playing)
 			{
-				month++;
-				day = 1;
-				manager.updateMonthly();
-			}
-			if (month > 12)
+				editMusic.play();
+			}*/
+		}
+		else if (manager.player->state == PlayerState::VIEW_MODE)
+		{
+			/*if (editMusic.getStatus() == sf::Music::Playing)
 			{
-				month = 1;
-				year++;
+				editMusic.stop();
+			}*/
+			// TODO
+		}
+
+		if (manager.player->state != PlayerState::CHOOSE_WORLD)
+		{
+			/*if (menuMusic.getStatus() == sf::Music::Playing)
+			{
+				menuMusic.stop();
+			}*/
+			timeStepper += dt * empirePlayer.timeSpeed;
+			if (timeStepper >= 1.0f)
+			{
+				timeStepper = 0.0f;
+				day++;
+				if (manager.player->state != PlayerState::CHOOSE_WORLD)
+				{
+					manager.updateDaily();
+				}
+				if (day > 30)
+				{
+					month++;
+					day = 1;
+					manager.updateMonthly();
+				}
+				if (month > 12)
+				{
+					month = 1;
+					year++;
+				}
 			}
+		}
+		else
+		{
+			/*if (menuMusic.getStatus() != sf::Music::Playing)
+			{
+				/*menuMusic.play();
+				printf("playing!");*/
+			//}
 		}
 
 
@@ -271,12 +349,29 @@ int main()
 		/*p.drawSector(p.getClosestSector(mousePos), &window, p.worldPosition);
 		p.draw(&window, sf::Vector2f(0, 0));*/
 
+
+		if (empirePlayer.state == PlayerState::CHOOSE_WORLD)
+		{
+			logoSpr.setOrigin(120, 44);
+			if (window.getSize().x > 1200.0f)
+			{
+				logoSpr.setScale(2.0f, 2.0f);
+			}
+			else
+			{
+				logoSpr.setScale(1.0f, 1.0f);
+			}
+			logoSpr.setPosition(sf::Vector2f(renderView.getCenter().x, 90.0f));
+			window.draw(logoSpr);
+		}
+
 		if (empirePlayer.state != PlayerState::EDIT_MODE)
 		{
 			universe.draw(&window);
 		}
 		else
 		{
+
 			manager.render(&window);
 			sf::Vector2f oldPos = empirePlayer.focused->worldPosition;
 			empirePlayer.focused->worldPosition = sf::Vector2f(0.0f, 0.0f);
@@ -285,8 +380,7 @@ int main()
 
 		}
 
-
-
+	
 
 		ImGui::Render();
 		window.display();

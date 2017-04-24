@@ -22,9 +22,9 @@
 #define BUILDING_LAUNCHER 5
 #define BUILDING_MINE 6
 #define BUILDING_MARKET 7
-#define BUILDING_MAGICPLACE 8
+#define BUILDING_SMARKET 8
 
-#define BUILDING_TYPES 8
+#define BUILDING_TYPES 9
 
 
 // HOUSE
@@ -50,10 +50,10 @@
 #define FARM_EMPLOYMENT 5
 #define FARM_BUILD_TIME 5
 // LAUNCHER
-#define LAUNCHER_PRICE 2000
-#define LAUNCHER_MAINTENANCE 50
-#define LAUNCHER_EMPLOYMENT 30
-#define LAUNCHER_BUILD_TIME 200
+#define LAUNCHER_PRICE 4500
+#define LAUNCHER_MAINTENANCE 15
+#define LAUNCHER_EMPLOYMENT 15
+#define LAUNCHER_BUILD_TIME 70
 // MINE
 #define MINE_PRICE 500
 #define MINE_MAINTENANCE 20
@@ -66,6 +66,12 @@
 #define MARKET_GENERATION 20
 #define MARKET_EMPLOYMENT 5
 #define MARKET_BUILD_TIME 10
+// SMARKET
+#define SMARKET_PRICE  300
+#define SMARKET_MAINTENANCE 0
+#define SMARKET_GENERATION 7
+#define SMARKET_EMPLOYMENT 2
+#define SMARKET_BUILD_TIME 4
 
 #define SECTOR_SIZE 32.0f
 
@@ -110,6 +116,8 @@ public:
 			return MINE_PRICE;
 		case BUILDING_LAUNCHER:
 			return LAUNCHER_PRICE;
+		case BUILDING_SMARKET:
+			return SMARKET_PRICE;
 		}
 
 		return 0;
@@ -133,6 +141,8 @@ public:
 			return MINE_BUILD_TIME;
 		case BUILDING_LAUNCHER:
 			return LAUNCHER_BUILD_TIME;
+		case BUILDING_SMARKET:
+			return SMARKET_BUILD_TIME;
 		}
 
 		return 0;
@@ -143,6 +153,8 @@ public:
 	std::string name;
 
 	bool easyHabitable = false;
+
+	bool alreadyOwned = true;
 
 	bool hasAtmosphere;
 	sf::Color atmosphereColor;
