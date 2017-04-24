@@ -214,6 +214,8 @@ void Planet::draw(sf::RenderWindow* win, sf::Vector2f sun)
 					b = sf::Sprite(buildings["market"]);
 				if (btype == BUILDING_SMARKET)
 					b = sf::Sprite(buildings["smarket"]);
+				if (btype == BUILDING_HFARM)
+					b = sf::Sprite(buildings["hydrofarm"]);
 				b.setOrigin(16, 64);
 				b.setPosition(getSectorPosition(i) + worldPosition);
 				b.setRotation(getSectorAngle(i));

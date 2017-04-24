@@ -46,6 +46,7 @@ int main()
 	sf::Texture market = sf::Texture();
 	sf::Texture logo = sf::Texture();
 	sf::Texture smarket = sf::Texture();
+	sf::Texture hydrofarm = sf::Texture();
 
 	cross.loadFromFile("Resource/cross.png");
 	gear.loadFromFile("Resource/gear.png");
@@ -65,6 +66,7 @@ int main()
 	market.loadFromFile("Resource/building/market.png");
 	smarket.loadFromFile("Resource/building/smarket.png");
 	logo.loadFromFile("Resource/logo.png");
+	hydrofarm.loadFromFile("Resource/building/hydrophonic.png");
 	space.setRepeated(true);
 
 	buildings["apps"] = appartment;
@@ -75,6 +77,7 @@ int main()
 	buildings["launcher"] = launcher;
 	buildings["market"] = market;
 	buildings["smarket"] = smarket;
+	buildings["hydrofarm"] = hydrofarm;
 
 	sf::Rect<float> empireWindow;
 	sf::Rect<float> systemWindow;
@@ -158,17 +161,17 @@ int main()
 	sf::Sound menuMusic;
 
 	sf::SoundBuffer editBuffer;
-	sf::Sound editMusic;
+	//sf::Sound editMusic;
 
-	menuBuffer.loadFromFile("Resource/music/overturetospace.ogg");
+	menuBuffer.loadFromFile("Resource/music/menumusic.ogg");
 	menuMusic.setBuffer(menuBuffer);
 
-	editBuffer.loadFromFile("Resource/music/planetview.ogg");
-	editMusic.setBuffer(editBuffer);
+	editBuffer.loadFromFile("Resource/music/editmusic.ogg");
+	/*editMusic.setBuffer(editBuffer);
 
 	menuMusic.setLoop(true);
 	editMusic.setLoop(true);
-
+	*/
 	menuMusic.play();
 
 
@@ -225,14 +228,14 @@ int main()
 			}
 		}
 
-		/*if (empirePlayer.limitFPS)
+		if (empirePlayer.limitFPS)
 		{
 			window.setFramerateLimit(60);
 		}
 		else
 		{
 			window.setFramerateLimit(-1);
-		}*/
+		}
 
 		dtt = dtClock.restart();
 		dt = dtt.asSeconds();
@@ -275,22 +278,19 @@ int main()
 
 		if (manager.player->state == PlayerState::EDIT_MODE)
 		{
-			/*if (menuMusic.getStatus() == sf::Music::Playing)
+			if (menuMusic.getBuffer() != &editBuffer)
 			{
-				menuMusic.stop();
+				menuMusic.setBuffer(editBuffer);
+				menuMusic.setPlayingOffset(sf::seconds(0));
+				menuMusic.play();
 			}
-
-			if (editMusic.getStatus() != sf::Music::Playing)
-			{
-				editMusic.play();
-			}*/
 		}
 		else if (manager.player->state == PlayerState::VIEW_MODE)
 		{
-			/*if (editMusic.getStatus() == sf::Music::Playing)
+			if (menuMusic.getBuffer() != &menuBuffer)
 			{
-				editMusic.stop();
-			}*/
+				menuMusic.setBuffer(menuBuffer);
+			}
 			// TODO
 		}
 

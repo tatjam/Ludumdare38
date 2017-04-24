@@ -8,8 +8,8 @@
 #define MAX_POS 10000
 #define MIN_DISTANCE_TO_STAR 1000
 
-#define MAX_PLANET_SIZE 60
-#define MIN_PLANET_SIZE 12
+#define MAX_PLANET_SIZE 50
+#define MIN_PLANET_SIZE 20
 
 #define GRASS_BASE_COLOR sf::Color(169, 232, 118)
 #define DUST_BASE_COLOR sf::Color(198, 198, 198)
