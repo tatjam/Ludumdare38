@@ -714,6 +714,7 @@ enum AIFocus
 	MAKE_HAPPY,
 	MAKE_SOLDIERS,
 	EXPAND,
+	MAKE_RESOURCES
 };
 
 
@@ -840,6 +841,24 @@ public:
 			{
 				linked->launchVehicle(universe->planets[i]);
 			}
+		}
+	}
+
+	bool aiMakeSoldiers(int count)
+	{
+		if (count * CASH_PER_SOLDIER > linked->money
+			|| count * METAL_PER_SOLDIER > linked->metal
+			|| count * TECH_PER_SOLDIER > linked->tech)
+		{
+			return false;
+		}
+		else
+		{
+			linked->soldiers += count;
+			linked->money -= count * CASH_PER_SOLDIER;
+			linked->metal -= count * METAL_PER_SOLDIER;
+			linked->tech -= count * TECH_PER_SOLDIER;
+			return true;
 		}
 	}
 
@@ -1132,7 +1151,7 @@ public:
 			else if (focus == AIFocus::MAKE_SOLDIERS)
 			{
 				//printf("AI is building all kind of stuff but focusing on war stuff!\n");
-				if (linked->happiness < 20)
+				if (linked->happiness < 10)
 				{
 					focus = AIFocus::MAKE_HAPPY;
 				}
@@ -1142,6 +1161,16 @@ public:
 					// WAR STUFF
 					// Make some soldiers
 					//printf("Making some soldiers!\n");
+					if (!aiMakeSoldiers(10))
+					{
+						if (!aiMakeSoldiers(5))
+						{
+							if (!aiMakeSoldiers(2))
+							{
+								focus = AIFocus::MAKE_RESOURCES;
+							}
+						}
+					}
 				}
 				else
 				{
@@ -1164,6 +1193,35 @@ public:
 						//printf("AI building lab!\n");
 						aiBuild(BUILDING_LABORATORY);
 					}
+				}
+			}
+			else if (focus == AIFocus::MAKE_RESOURCES)
+			{
+				if (linked->metaldaily < 6)
+				{
+					aiBuild(BUILDING_MINE);
+				}
+				else if (linked->moneydaily < 6)
+				{
+					if (!aiBuild(BUILDING_MARKET))
+					{
+						aiBuild(BUILDING_SMARKET);
+					}
+				}
+				else if (linked->fooddaily < 6)
+				{
+					if (!aiBuild(BUILDING_HFARM))
+					{
+						aiBuild(BUILDING_FARM);
+					}
+				}
+				else if (linked->techdaily < 6)
+				{
+					aiBuild(BUILDING_LABORATORY);
+				}
+				else
+				{
+					focus = AIFocus::MAKE_HAPPY;
 				}
 			}
 			else if (focus == AIFocus::EXPAND)
@@ -1825,7 +1883,9 @@ public:
 			ImGui::Text("Build Progress: %i%%", (int)(focused->tilesBuilding[tileC] * 100.0f));
 			if (ImGui::Button("Destroy"))
 			{
+				linked->money += Planet::getBuildingPrice(focused->tiles[tileC]) / 3;
 				focused->tiles[tileC] = 0;
+				focused->tilesBuilding[tileC] = 0;
 				focused->usedtiles--;
 			}
 		}
