@@ -189,236 +189,277 @@ int main()
 	if(empirePlayer.limitFPS)
 		window.setFramerateLimit(60);
 
+	bool lose = false;
+
 	while (window.isOpen())
 	{
 		sf::Event event;
 
-		if (empirePlayer.updateWindow)
+		if (empirePlayer.lose)
 		{
-			renderView.reset(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
-			window.setView(renderView);
-			if (window.getSize().x / (float)512 > window.getSize().y / (float)512)
+			while (window.pollEvent(event))
 			{
-				backdropScale = window.getSize().x / (float)512;
-			}
-			else
-			{
-				backdropScale = window.getSize().y / 512;
-			}
+				ImGui::SFML::ProcessEvent(event);
 
-
-			//resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
-			empirePlayer.resize(window.getSize().x, window.getSize().y);
-
-		}
-
-		while (window.pollEvent(event))
-		{
-			ImGui::SFML::ProcessEvent(event);
-
-			if (event.type == sf::Event::Closed)
-				window.close();
-			if (event.type == sf::Event::Resized)
-			{
-				renderView.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
-				window.setView(renderView);
-				if ((float)event.size.width / (float)512 > (float)event.size.height / (float)512)
+				if (event.type == sf::Event::Closed)
 				{
-					backdropScale = (float)event.size.width / (float)512;
+					window.close();
+				}
+			}
+
+			dtt = dtClock.restart();
+			dt = dtt.asSeconds();
+
+			sf::RectangleShape rect = sf::RectangleShape(sf::Vector2f(0, 0));
+
+
+			ImGui::SFML::Update(window, dtt);
+
+			ImGui::SetNextWindowPos(ImVec2(20, 20));
+			ImGui::SetNextWindowSize(ImVec2(400, 400));
+			ImGui::Begin("You lost!");
+			ImGui::TextWrapped("Sadly due to lack of time a restart feature is not available!");
+			ImGui::TextWrapped("You probably got killed by AI, make sure you have a big enough army before attacking.");
+			if (ImGui::Button("Quit"))
+			{
+				window.close();
+			}
+			ImGui::End();
+
+			window.clear();
+			window.draw(rect);
+			ImGui::Render();
+			window.display();
+		}
+		else
+		{
+			if (empirePlayer.updateWindow)
+			{
+				renderView.reset(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
+				window.setView(renderView);
+				if (window.getSize().x / (float)512 > window.getSize().y / (float)512)
+				{
+					backdropScale = window.getSize().x / (float)512;
 				}
 				else
 				{
-					backdropScale = event.size.height / 512;
+					backdropScale = window.getSize().y / 512;
 				}
-				
 
-				resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
-				empirePlayer.resize((int)event.size.width, (int)event.size.height);
-				printf("Now scale %f\n", backdropScale);
+
+				//resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
+				empirePlayer.resize(window.getSize().x, window.getSize().y);
 
 			}
-		}
 
-		menuMusic.setVolume(empirePlayer.musicVolume * 100);
-		empirePlayer.errorP.setVolume(empirePlayer.fxVolume * 100);
-
-		if (empirePlayer.limitFPS)
-		{
-			window.setFramerateLimit(60);
-		}
-		else
-		{
-			window.setFramerateLimit(-1);
-		}
-
-		dtt = dtClock.restart();
-		dt = dtt.asSeconds();
-
-
-		ImGui::SFML::Update(window, dtt);
-
-		frameAverage += dt;
-		frameAverage *= 0.5f;
-
-		
-		window.setView(renderView);
-
-		mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
-
-		manager.update(&renderView, dt, mousePos, &window);
-
-	/*	backdrop.setTextureRect(sf::IntRect(
-			renderView.getCenter().x - (renderView.getSize().x/2), 
-			renderView.getCenter().y - (renderView.getSize().y/2), 
-			renderView.getCenter().x + (renderView.getSize().x / 2),
-			renderView.getCenter().y + (renderView.getSize().y / 2)));
-	
-	*/		
-
-		{
-
-
-			backdrop.setTextureRect(sf::IntRect(
-				renderView.getCenter().x - (renderView.getSize().x / 2),
-				renderView.getCenter().y - (renderView.getSize().y / 2),
-				renderView.getSize().x,
-				renderView.getSize().y
-				));
-
-			backdrop.setPosition(
-				renderView.getCenter().x - renderView.getSize().x / 2,
-				renderView.getCenter().y - renderView.getSize().y / 2);
-		}
-
-		if (manager.player->state == PlayerState::EDIT_MODE)
-		{
-			if (menuMusic.getBuffer() != &editBuffer)
+			while (window.pollEvent(event))
 			{
-				menuMusic.setBuffer(editBuffer);
-				menuMusic.setPlayingOffset(sf::seconds(0));
-				menuMusic.play();
-			}
-		}
-		else if (manager.player->state == PlayerState::VIEW_MODE)
-		{
-			if (menuMusic.getBuffer() != &playBuffer)
-			{
-				menuMusic.setBuffer(playBuffer);
-				menuMusic.setPlayingOffset(sf::seconds(0));
-				menuMusic.play();
-			}
-			// TODO
-		}
+				ImGui::SFML::ProcessEvent(event);
 
-		if (manager.player->state != PlayerState::CHOOSE_WORLD)
-		{
-			if (hasStarted == false)
-			{
-				for (int i = 0; i < manager.player->aiCount; i++)
+				if (event.type == sf::Event::Closed)
+					window.close();
+				if (event.type == sf::Event::Resized)
 				{
-					manager.createAIEmpire();
-				}
-				hasStarted = true;
-			}
+					renderView.reset(sf::FloatRect(0, 0, event.size.width, event.size.height));
+					window.setView(renderView);
+					if ((float)event.size.width / (float)512 > (float)event.size.height / (float)512)
+					{
+						backdropScale = (float)event.size.width / (float)512;
+					}
+					else
+					{
+						backdropScale = event.size.height / 512;
+					}
 
-			timeStepper += dt * empirePlayer.timeSpeed;
-			if (timeStepper >= 1.0f)
-			{
-				timeStepper = 0.0f;
-				day++;
-				if (manager.player->state != PlayerState::CHOOSE_WORLD)
-				{
-					manager.updateDaily();
-				}
-				if (day > 30)
-				{
-					month++;
-					day = 1;
-					manager.updateMonthly();
-				}
-				if (month > 12)
-				{
-					month = 1;
-					year++;
+
+					resize((int)event.size.width, (int)event.size.height, empireWindow, systemWindow);
+					empirePlayer.resize((int)event.size.width, (int)event.size.height);
+					printf("Now scale %f\n", backdropScale);
+
 				}
 			}
-		}
-		else
-		{
-			
 
-			/*if (menuMusic.getStatus() != sf::Music::Playing)
+			menuMusic.setVolume(empirePlayer.musicVolume * 100);
+			empirePlayer.errorP.setVolume(empirePlayer.fxVolume * 100);
+
+			if (empirePlayer.limitFPS)
 			{
-				/*menuMusic.play();
-				printf("playing!");*/
-			//}
-		}
-
-
-		
-
-		
-
-		mousePos -= p.worldPosition;
-		universe.update(dt * empirePlayer.timeSpeed);
-		//p.update(dt, false);
-
-		window.clear(sf::Color(17, 10, 32));
-		
-		window.draw(backdrop);
-
-		//window.draw(starSpr);
-
-		/*p.drawSector(p.getClosestSector(mousePos), &window, p.worldPosition);
-		p.draw(&window, sf::Vector2f(0, 0));*/
-
-
-		if (empirePlayer.state == PlayerState::CHOOSE_WORLD)
-		{
-			logoSpr.setOrigin(120, 44);
-			if (window.getSize().x > 1200.0f)
-			{
-				logoSpr.setScale(2.0f, 2.0f);
+				window.setFramerateLimit(60);
 			}
 			else
 			{
-				logoSpr.setScale(1.0f, 1.0f);
+				window.setFramerateLimit(-1);
 			}
-			if (empirePlayer.focused == NULL)
+
+			dtt = dtClock.restart();
+			dt = dtt.asSeconds();
+
+
+			ImGui::SFML::Update(window, dtt);
+
+			frameAverage += dt;
+			frameAverage *= 0.5f;
+
+
+			window.setView(renderView);
+
+			mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
+
+			manager.update(&renderView, dt, mousePos, &window);
+
+			/*	backdrop.setTextureRect(sf::IntRect(
+					renderView.getCenter().x - (renderView.getSize().x/2),
+					renderView.getCenter().y - (renderView.getSize().y/2),
+					renderView.getCenter().x + (renderView.getSize().x / 2),
+					renderView.getCenter().y + (renderView.getSize().y / 2)));
+
+			*/
+
 			{
-				
-				logoSpr.setPosition(sf::Vector2f(renderView.getCenter().x, 90.0f));
+
+
+				backdrop.setTextureRect(sf::IntRect(
+					renderView.getCenter().x - (renderView.getSize().x / 2),
+					renderView.getCenter().y - (renderView.getSize().y / 2),
+					renderView.getSize().x,
+					renderView.getSize().y
+					));
+
+				backdrop.setPosition(
+					renderView.getCenter().x - renderView.getSize().x / 2,
+					renderView.getCenter().y - renderView.getSize().y / 2);
+			}
+
+			if (manager.player->state == PlayerState::EDIT_MODE)
+			{
+				if (menuMusic.getBuffer() != &editBuffer)
+				{
+					menuMusic.setBuffer(editBuffer);
+					menuMusic.setPlayingOffset(sf::seconds(0));
+					menuMusic.play();
+				}
+			}
+			else if (manager.player->state == PlayerState::VIEW_MODE)
+			{
+				if (menuMusic.getBuffer() != &playBuffer)
+				{
+					menuMusic.setBuffer(playBuffer);
+					menuMusic.setPlayingOffset(sf::seconds(0));
+					menuMusic.play();
+				}
+				// TODO
+			}
+
+			if (manager.player->state != PlayerState::CHOOSE_WORLD)
+			{
+				if (hasStarted == false)
+				{
+					for (int i = 0; i < manager.player->aiCount; i++)
+					{
+						manager.createAIEmpire();
+					}
+					hasStarted = true;
+				}
+
+				timeStepper += dt * empirePlayer.timeSpeed;
+				if (timeStepper >= 1.0f)
+				{
+					timeStepper = 0.0f;
+					day++;
+					if (manager.player->state != PlayerState::CHOOSE_WORLD)
+					{
+						manager.updateDaily();
+					}
+					if (day > 30)
+					{
+						month++;
+						day = 1;
+						manager.updateMonthly();
+					}
+					if (month > 12)
+					{
+						month = 1;
+						year++;
+					}
+				}
 			}
 			else
 			{
-				logoSpr.setPosition(sf::Vector2f(
-					empirePlayer.focused->worldPosition.x + empirePlayer.focused->radius, 
-					empirePlayer.focused->worldPosition.y - 
-					(renderView.getSize().y / 4) + (empirePlayer.focused->radius * 0.5f)));
+
+
+				/*if (menuMusic.getStatus() != sf::Music::Playing)
+				{
+					/*menuMusic.play();
+					printf("playing!");*/
+					//}
 			}
 
-			window.draw(logoSpr);
+
+
+
+
+
+			mousePos -= p.worldPosition;
+			universe.update(dt * empirePlayer.timeSpeed);
+			//p.update(dt, false);
+
+			window.clear(sf::Color(17, 10, 32));
+
+			window.draw(backdrop);
+
+			//window.draw(starSpr);
+
+			/*p.drawSector(p.getClosestSector(mousePos), &window, p.worldPosition);
+			p.draw(&window, sf::Vector2f(0, 0));*/
+
+
+			if (empirePlayer.state == PlayerState::CHOOSE_WORLD)
+			{
+				logoSpr.setOrigin(120, 44);
+				if (window.getSize().x > 1200.0f)
+				{
+					logoSpr.setScale(2.0f, 2.0f);
+				}
+				else
+				{
+					logoSpr.setScale(1.0f, 1.0f);
+				}
+				if (empirePlayer.focused == NULL)
+				{
+
+					logoSpr.setPosition(sf::Vector2f(renderView.getCenter().x, 90.0f));
+				}
+				else
+				{
+					logoSpr.setPosition(sf::Vector2f(
+						empirePlayer.focused->worldPosition.x + empirePlayer.focused->radius,
+						empirePlayer.focused->worldPosition.y -
+						(renderView.getSize().y / 4) + (empirePlayer.focused->radius * 0.5f)));
+				}
+
+				window.draw(logoSpr);
+			}
+
+			if (empirePlayer.state != PlayerState::EDIT_MODE)
+			{
+				universe.draw(&window);
+			}
+			else
+			{
+
+				manager.render(&window);
+				sf::Vector2f oldPos = empirePlayer.focused->worldPosition;
+				empirePlayer.focused->worldPosition = sf::Vector2f(0.0f, 0.0f);
+				empirePlayer.focused->draw(&window, sf::Vector2f(0.0f, 0.0f));
+				empirePlayer.focused->worldPosition = oldPos;
+
+			}
+
+
+
+			ImGui::Render();
+			window.display();
 		}
-
-		if (empirePlayer.state != PlayerState::EDIT_MODE)
-		{
-			universe.draw(&window);
-		}
-		else
-		{
-
-			manager.render(&window);
-			sf::Vector2f oldPos = empirePlayer.focused->worldPosition;
-			empirePlayer.focused->worldPosition = sf::Vector2f(0.0f, 0.0f);
-			empirePlayer.focused->draw(&window, sf::Vector2f(0.0f, 0.0f));
-			empirePlayer.focused->worldPosition = oldPos;
-
-		}
-
-	
-
-		ImGui::Render();
-		window.display();
 	}
 
 	ImGui::SFML::Shutdown();

@@ -58,9 +58,9 @@ struct Event
 class EmpireAI;
 
 
-#define CASH_PER_SOLDIER 200
-#define METAL_PER_SOLDIER 100
-#define TECH_PER_SOLDIER 100
+#define CASH_PER_SOLDIER 100
+#define METAL_PER_SOLDIER 60
+#define TECH_PER_SOLDIER 60
 
 class Empire
 {
@@ -147,28 +147,25 @@ public:
 
 	void destroyBuildings(Planet* target, int count)
 	{
+		printf("Destroying %i buildings\n", count);
 		int destroyed = 0;
 		bool done = false;
 		if (target->usedtiles < count)
 		{
 			count = target->usedtiles;
 		}
-		printf("Deleting %i tiles\n", count);
 
 		while(!done)
 		{
-			printf("DELETING TILE?");
 			int pos = rand() % target->size;
 			if (target->tiles[pos] != 0)
 			{
 				target->tiles[pos] = 0;
 				target->tilesBuilding[pos] = 0;
 				destroyed++;
-				printf("OK!\n");
 			}
 			else
 			{
-				printf("NAY!\n");
 			}
 			if (destroyed >= count)
 			{
@@ -177,8 +174,14 @@ public:
 		}
 	}
 
+
 	void attack(Planet* target, int sold, bool annex)
 	{
+		if (sold > soldiers)
+		{
+			sold = soldiers;
+		}
+
 		if (target->owner != NULL && target->owner != this)
 		{
 
@@ -189,9 +192,22 @@ public:
 			float ourLuck = ((float)(rand() % 100) / 100.0f) + 0.7f;
 			float theirLuck = ((float)(rand() % 100) / 100.0f) + 0.7f;
 
+			printf("Attack power: %f | Receive Power: %f\n", ourPower, theirPower);
+
 
 			ourPower *= ourLuck;
 			theirPower *= theirLuck;
+
+			printf("Attack power: %f | Receive Power: %f\n", ourPower, theirPower);
+
+			if (abs(ourPower - theirPower) < 5.0f)
+			{
+				std::string message = "We had very similar forces to the enemy and so no damage was done to ";
+				message.append(target->name.c_str());
+				events.push_back(Event(EventSeverity::FATAL, message));
+				printf("Similar forces!\n", ourPower, theirPower);
+				return;
+			}
 
 
 			if (ourPower > 30)
@@ -201,18 +217,18 @@ public:
 				if (ourPower > theirPower)
 				{
 
-
+					printf("We win!\n");
 					if (annex)
 					{
 						// We can take over the planet!
 						// Also some stuff will be damaged and a portion 
 						// of their population will move to our civilization
-						int buildingsToDestroy = (theirPower / ourPower) * 10;
+						int buildingsToDestroy = (theirPower / ourPower) * 2;
 
 						std::string message = "Our forces sucessfully annexed planet ";
 						message.append(target->name.c_str());
 						message.append(". Buildings destroyed: ");
-						message.append(std::to_string((int)((ourPower / theirPower) * 10)));
+						message.append(std::to_string((int)((ourPower - theirPower) / 2)));
 						events.push_back(Event(EventSeverity::FATAL, message));
 
 						target->owner->planets.erase(
@@ -237,10 +253,10 @@ public:
 						std::string message = "Our forces sucessfully damaged planet ";
 						message.append(target->name.c_str());
 						message.append(". Buildings destroyed: ");
-						message.append(std::to_string((int)((ourPower / theirPower) * 30)));
+						message.append(std::to_string((int)((ourPower - theirPower))));
 						events.push_back(Event(EventSeverity::FATAL, message));
 
-						int toDestroy = (int)((ourPower / theirPower) * 30);
+						int toDestroy = (int)((ourPower - theirPower) * 3);
 
 						destroyBuildings(target, toDestroy);
 					}
@@ -250,10 +266,10 @@ public:
 					std::string message = "We could not win the defensive forces at ";
 					message.append(target->name.c_str());
 					message.append(". Buildings destroyed: ");
-					message.append(std::to_string((int)((ourPower / theirPower) * 10)));
+					message.append(std::to_string((int)((ourPower) / 2)));
 					events.push_back(Event(EventSeverity::FATAL, message));
 					// We will do a bit of damage to buildings
-					int buildingsToDestroy = (ourPower / theirPower) * 10;
+					int buildingsToDestroy = (ourPower) / 2;
 
 					int toDestroy = (int)((ourPower / theirPower) * 10);
 
@@ -864,6 +880,7 @@ public:
 
 	void aiAttack(Empire* e)
 	{
+		//printf("Ai attacking to %s\n", e->name.c_str());
 		if (peaceful == false)
 		{
 			if (linked->soldiers < 35)
@@ -872,21 +889,23 @@ public:
 				{
 					focus = AIFocus::MAKE_SOLDIERS;
 				}
+				//printf("We only got %i soldiers\n", linked->soldiers);
 			}
 			else
 			{
 				int estimated = e->soldiers;
 				estimated += (rand() % e->soldiers / 2) - e->soldiers / 2;
-				printf("estimated %i\n", estimated);
 				// Attack random planet of empire
 				int n = rand() % e->planets.size();
 				linked->attack(e->planets[n], estimated + 100, rand() % 2);
 				relations[e] = Relation::ENEMIES;
+				//printf("We attack!!\n");
 			}
 		}
 		else
 		{
 			// We don't attack in peaceful mode! Even if we are attacked
+			//printf("We are peaceful duh\n");
 		}
 	}
 
@@ -938,6 +957,19 @@ public:
 				}
 				if (enemies.size() != 0)
 				{
+					//printf("Making some soldiers! %s\n", linked->name.c_str());
+					if (!aiMakeSoldiers(10))
+					{
+						if (!aiMakeSoldiers(5))
+						{
+							if (!aiMakeSoldiers(2))
+							{
+								//printf("Damn son couldn't make any!\n");
+								focus = AIFocus::MAKE_RESOURCES;
+							}
+						}
+					}
+
 					int n = rand() % enemies.size();
 
 					aiAttack(enemies[n]);
@@ -972,6 +1004,18 @@ public:
 					}
 					if (enemies.size() != 0)
 					{
+						//printf("Making some soldiers! %s\n", linked->name.c_str());
+						if (!aiMakeSoldiers(10))
+						{
+							if (!aiMakeSoldiers(5))
+							{
+								if (!aiMakeSoldiers(2))
+								{
+									//printf("Damn son couldn't make any!\n");
+									focus = AIFocus::MAKE_RESOURCES;
+								}
+							}
+						}
 						int n = rand() % enemies.size();
 
 						aiAttack(enemies[n]);
@@ -1150,6 +1194,19 @@ public:
 			}
 			else if (focus == AIFocus::MAKE_SOLDIERS)
 			{
+				printf("Making some soldiers! %s\n", linked->name.c_str());
+				if (!aiMakeSoldiers(10))
+				{
+					if (!aiMakeSoldiers(5))
+					{
+						if (!aiMakeSoldiers(2))
+						{
+							printf("Damn son couldn't make any!\n");
+							focus = AIFocus::MAKE_RESOURCES;
+						}
+					}
+				}
+
 				//printf("AI is building all kind of stuff but focusing on war stuff!\n");
 				if (linked->happiness < 10)
 				{
@@ -1160,13 +1217,14 @@ public:
 				{
 					// WAR STUFF
 					// Make some soldiers
-					//printf("Making some soldiers!\n");
+					printf("Making some soldiers! %s\n", linked->name.c_str());
 					if (!aiMakeSoldiers(10))
 					{
 						if (!aiMakeSoldiers(5))
 						{
 							if (!aiMakeSoldiers(2))
 							{
+								printf("Damn son couldn't make any!\n");
 								focus = AIFocus::MAKE_RESOURCES;
 							}
 						}
@@ -1184,7 +1242,6 @@ public:
 						}
 						else
 						{
-							printf("AI building mine\n");
 							aiBuild(BUILDING_MINE);
 						}
 					}
@@ -1372,6 +1429,8 @@ class EmpirePlayer
 {
 public:
 
+
+	bool lose = false;
 
 	std::vector<Event> events;
 
@@ -2007,6 +2066,7 @@ public:
 			{
 				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1.0), "NEUTRAL");
 			}
+			// These below are not used cuz you know, LudumDare :P
 			else if (linked->otherEmpires[i]->aicontroller->relations[linked] == Relation::GOOD)
 			{
 				ImGui::TextColored(ImVec4(0.5, 1.0, 0.0, 1.0), "GOOD");
@@ -2211,9 +2271,9 @@ public:
 							ImGui::TextColored(ImVec4(1.0, 0.2, 0.2, 1.0), "Non-Habitable");
 						}
 
-						ImGui::Text("Food Multiplier: %f", focused->foodBoost);
-						ImGui::Text("Mineral Multiplier: %f", focused->mineralBoost);
-						ImGui::Text("Science Multiplier: %f", focused->scienceBoost);
+						ImGui::Text("Food Multiplier: %f", universe->planets[i]->scienceBoost);
+						ImGui::Text("Mineral Multiplier: %f", universe->planets[i]->scienceBoost);
+						ImGui::Text("Science Multiplier: %f", universe->planets[i]->scienceBoost);
 
 
 
@@ -2769,9 +2829,17 @@ public:
 			{
 				v->zoom(0.998f);
 			}
+			if (linked->planets.size() <= 0)
+			{
+				lose = true;
+			}
 		}
 		else if (state == PlayerState::EDIT_MODE)
 		{
+			if (linked->planets.size() <= 0)
+			{
+				lose = true;
+			}
 			/*if (focused != NULL)
 			{
 				v->setCenter(focused->worldPosition + sf::Vector2f(focused->radius, focused->radius));
@@ -3031,6 +3099,8 @@ public:
 				empires[i]->aicontroller->relations[empires[empires.size() - 1]] = Relation::NEUTRAL;
 			}
 		}
+
+		nAi->peaceful = player->peaceful;
 
 
 		aiempires.push_back(nAi);
